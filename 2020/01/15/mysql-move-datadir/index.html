@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="Hexo, NexT" />
+  <meta name="keywords" content="mysql,数据文件迁移," />
 
 
 
@@ -80,15 +80,16 @@
 
 
 <meta name="description" content="Linux下迁移Mysql数据目录 最初架构设计，mysql的数据目录被放在系统盘里面，随着数据的不断增长，系统盘必须随着数据不断扩容，才能满足服务的正常运行。当系统盘扩容到1T的时候出现了瓶颈，系统盘最高支持扩容到1T。这使得不能不面临mysql数据目录迁移到数据盘问题。  一.迁移时需要考虑的事项 尽可能少的迁移改动，防止在数据迁移时出错 需要考虑到目前服务还在使用，所以迁移应该尽可能快的完成">
+<meta name="keywords" content="mysql,数据文件迁移">
 <meta property="og:type" content="article">
-<meta property="og:title" content="宁静的世界">
+<meta property="og:title" content="Linux下迁移Mysql数据目录">
 <meta property="og:url" content="http://yoursite.com/2020/01/15/mysql-move-datadir/index.html">
 <meta property="og:site_name" content="宁静的世界">
 <meta property="og:description" content="Linux下迁移Mysql数据目录 最初架构设计，mysql的数据目录被放在系统盘里面，随着数据的不断增长，系统盘必须随着数据不断扩容，才能满足服务的正常运行。当系统盘扩容到1T的时候出现了瓶颈，系统盘最高支持扩容到1T。这使得不能不面临mysql数据目录迁移到数据盘问题。  一.迁移时需要考虑的事项 尽可能少的迁移改动，防止在数据迁移时出错 需要考虑到目前服务还在使用，所以迁移应该尽可能快的完成">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2020-01-16T00:51:33.838Z">
+<meta property="og:updated_time" content="2021-08-07T03:01:43.205Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="宁静的世界">
+<meta name="twitter:title" content="Linux下迁移Mysql数据目录">
 <meta name="twitter:description" content="Linux下迁移Mysql数据目录 最初架构设计，mysql的数据目录被放在系统盘里面，随着数据的不断增长，系统盘必须随着数据不断扩容，才能满足服务的正常运行。当系统盘扩容到1T的时候出现了瓶颈，系统盘最高支持扩容到1T。这使得不能不面临mysql数据目录迁移到数据盘问题。  一.迁移时需要考虑的事项 尽可能少的迁移改动，防止在数据迁移时出错 需要考虑到目前服务还在使用，所以迁移应该尽可能快的完成">
 
 
@@ -125,7 +126,7 @@
 
 
 
-  <title> | 宁静的世界</title>
+  <title>Linux下迁移Mysql数据目录 | 宁静的世界</title>
   
 
 
@@ -269,7 +270,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline"></h1>
+          <h1 class="post-title" itemprop="name headline">Linux下迁移Mysql数据目录</h1>
         
 
         <div class="post-meta">
@@ -291,6 +292,28 @@
             
           </span>
 
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Mysql/" itemprop="url" rel="index">
+                    <span itemprop="name">Mysql</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
           
 
           
@@ -348,10 +371,6 @@
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 这里一定需要使用start,不能用restart,否则会出现问题</span><br><span class="line">systemctl start mysqld</span><br></pre></td></tr></table></figure>
 </li>
 </ol>
-<ol start="7">
-<li></li>
-</ol>
-<p>#### </p>
 
       
     </div>
@@ -366,6 +385,14 @@
     
 
     <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/mysql/" rel="tag"># mysql</a>
+          
+            <a href="/tags/数据文件迁移/" rel="tag"># 数据文件迁移</a>
+          
+        </div>
       
 
       
@@ -465,7 +492,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-count">7</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -476,7 +503,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-count">5</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -487,7 +514,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-count">13</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
