@@ -252,6 +252,1497 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/01/15/mysql-move-datadir/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2020/01/15/mysql-move-datadir/" itemprop="url">未命名</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-01-15T17:02:26+08:00">
+                2020-01-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="Linux下迁移Mysql数据目录"><a href="#Linux下迁移Mysql数据目录" class="headerlink" title="Linux下迁移Mysql数据目录"></a>Linux下迁移Mysql数据目录</h2><blockquote>
+<p>最初架构设计，mysql的数据目录被放在系统盘里面，随着数据的不断增长，系统盘必须随着数据不断扩容，才能满足服务的正常运行。当系统盘扩容到1T的时候出现了瓶颈，系统盘最高支持扩容到1T。这使得不能不面临mysql数据目录迁移到数据盘问题。</p>
+</blockquote>
+<h3 id="一-迁移时需要考虑的事项"><a href="#一-迁移时需要考虑的事项" class="headerlink" title="一.迁移时需要考虑的事项"></a>一.迁移时需要考虑的事项</h3><ol>
+<li>尽可能少的迁移改动，防止在数据迁移时出错</li>
+<li>需要考虑到目前服务还在使用，所以迁移应该尽可能快的完成。</li>
+<li>迁移尽量不影响多源复制，如果复制中断，修复起来比较麻烦，而且还影响微信端的正常使用。</li>
+<li>系统盘不能缩容，需要考虑剩余的系统盘空间怎么办</li>
+</ol>
+<h3 id="二-迁移步骤"><a href="#二-迁移步骤" class="headerlink" title="二.迁移步骤"></a>二.迁移步骤</h3><ol>
+<li><p>在中央业务库中暂停迁移学校的多源复制</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">stop slave for channel &quot;school47&quot;;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>暂停学校服务</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pm2 stop 1</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>停止mysql服务</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl stop mysqld.service</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>复制原数据目录的数据到将要迁移的数据目录</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 1.进入挂载的数据盘目录</span><br><span class="line"><span class="meta">shell&gt;</span> cd /mnt/sse/</span><br><span class="line"><span class="meta">#</span> 2.将原数据目录下的文件复制到将要迁移的目录，注意这里cp要加 -a，需要保留原文件属性</span><br><span class="line"><span class="meta">shell&gt;</span> cp -a -r /var/lib/mysql/ ./</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>修改/etc/my.cnf文件中的配置。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[mysqld]</span><br><span class="line">skip-log-bin</span><br><span class="line">datadir=/mnt/sse/mysql</span><br><span class="line">socket=/mnt/sse/mysql/mysql.sock</span><br><span class="line">[client]</span><br><span class="line"><span class="meta">#</span> 如果不设置这句的话，登录数据库的时候会报：ERROR 2002 (HY000): Can't connect to local MySQL server through socket '/var/lib/mysql/mysql.sock' (2)</span><br><span class="line">socket=/mnt/sse/mysql/mysql.sock</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>开启mysql</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 这里一定需要使用start,不能用restart,否则会出现问题</span><br><span class="line">systemctl start mysqld</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="7">
+<li></li>
+</ol>
+<p>#### </p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/12/06/vscode-keyboard-shortcuts/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/12/06/vscode-keyboard-shortcuts/" itemprop="url">Mac vscode快捷键</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-12-06T17:03:23+08:00">
+                2019-12-06
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/VScode/" itemprop="url" rel="index">
+                    <span itemprop="name">VScode</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h3 id="全局"><a href="#全局" class="headerlink" title="全局"></a>全局</h3><table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command + Shift + P / F1</td>
+<td>显示命令面板</td>
+</tr>
+<tr>
+<td>Command + P</td>
+<td>快速打开</td>
+</tr>
+<tr>
+<td>Command + Shift + N</td>
+<td>打开新窗口</td>
+</tr>
+<tr>
+<td>Command + W</td>
+<td>关闭窗口</td>
+</tr>
+</tbody>
+</table>
+<h3 id="基本"><a href="#基本" class="headerlink" title="基本"></a>基本</h3><table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command + X</td>
+<td>剪切（未选中文本的情况下，剪切光标所在行）</td>
+</tr>
+<tr>
+<td>Command + C</td>
+<td>复制（未选中文本的情况下，复制光标所在行）</td>
+</tr>
+<tr>
+<td>Option + Up</td>
+<td>向上移动行</td>
+</tr>
+<tr>
+<td>Option + Down</td>
+<td>向下移动行</td>
+</tr>
+<tr>
+<td>Option + Shift + Up</td>
+<td>向上复制行</td>
+</tr>
+<tr>
+<td>Option + Shift + Down</td>
+<td>向下复制行</td>
+</tr>
+<tr>
+<td>Command + Shift + K</td>
+<td>删除行</td>
+</tr>
+<tr>
+<td>Command + Enter</td>
+<td>下一行插入</td>
+</tr>
+<tr>
+<td>Command + Shift + Enter</td>
+<td>上一行插入</td>
+</tr>
+<tr>
+<td>Command + Shift + \</td>
+<td>跳转到匹配的括号</td>
+</tr>
+<tr>
+<td>Command + [</td>
+<td>减少缩进</td>
+</tr>
+<tr>
+<td>Command + ]</td>
+<td>增加缩进</td>
+</tr>
+<tr>
+<td>Home</td>
+<td>跳转至行首</td>
+</tr>
+<tr>
+<td>End</td>
+<td>跳转到行尾</td>
+</tr>
+<tr>
+<td>Command + Up</td>
+<td>跳转至文件开头</td>
+</tr>
+<tr>
+<td>Command + Down</td>
+<td>跳转至文件结尾</td>
+</tr>
+<tr>
+<td>Ctrl + PgUp</td>
+<td>按行向上滚动</td>
+</tr>
+<tr>
+<td>Ctrl + PgDown</td>
+<td>按行向下滚动</td>
+</tr>
+<tr>
+<td>Command + PgUp</td>
+<td>按屏向上滚动</td>
+</tr>
+<tr>
+<td>Command + PgDown</td>
+<td>按屏向下滚动</td>
+</tr>
+<tr>
+<td>Command + Shift + [</td>
+<td>折叠代码块</td>
+</tr>
+<tr>
+<td>Command + Shift + ]</td>
+<td>展开代码块</td>
+</tr>
+<tr>
+<td>Command + K Command + [</td>
+<td>折叠全部子代码块</td>
+</tr>
+<tr>
+<td>Command + K Command + ]</td>
+<td>展开全部子代码块</td>
+</tr>
+<tr>
+<td>Command + K Command + 0</td>
+<td>折叠全部代码块</td>
+</tr>
+<tr>
+<td>Command + K Command + J</td>
+<td>展开全部代码块</td>
+</tr>
+<tr>
+<td>Command + K Command + C</td>
+<td>添加行注释</td>
+</tr>
+<tr>
+<td>Command + K Command + U</td>
+<td>移除行注释</td>
+</tr>
+<tr>
+<td>Command + /</td>
+<td>添加、移除行注释</td>
+</tr>
+<tr>
+<td>Option + Shift + A</td>
+<td>添加、移除块注释</td>
+</tr>
+<tr>
+<td>Option + Z</td>
+<td>自动换行、取消自动换行</td>
+</tr>
+</tbody>
+</table>
+<h3 id="多光标与选择"><a href="#多光标与选择" class="headerlink" title="多光标与选择"></a>多光标与选择</h3><table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Option + 点击</td>
+<td>插入多个光标</td>
+</tr>
+<tr>
+<td>Command + Option + Up</td>
+<td>向上插入光标</td>
+</tr>
+<tr>
+<td>Command + Option + Down</td>
+<td>向下插入光标</td>
+</tr>
+<tr>
+<td>Command + U</td>
+<td>撤销上一个光标操作</td>
+</tr>
+<tr>
+<td>Option + Shift + I</td>
+<td>在所选行的行尾插入光标</td>
+</tr>
+<tr>
+<td>Command + I</td>
+<td>选中当前行</td>
+</tr>
+<tr>
+<td>Command + Shift + L</td>
+<td>选中所有与当前选中内容相同部分</td>
+</tr>
+<tr>
+<td>Command + F2</td>
+<td>选中所有与当前选中单词相同的单词</td>
+</tr>
+<tr>
+<td>Command + Ctrl + Shift + Left</td>
+<td>折叠选中</td>
+</tr>
+<tr>
+<td>Command + Ctrl + Shift + Right</td>
+<td>展开选中</td>
+</tr>
+<tr>
+<td>Alt + Shift + 拖动鼠标</td>
+<td>选中代码块</td>
+</tr>
+<tr>
+<td>Command + Shift + Option + Up</td>
+<td>列选择 向上</td>
+</tr>
+<tr>
+<td>Command + Shift + Option + Down</td>
+<td>列选择 向下</td>
+</tr>
+<tr>
+<td>Command + Shift + Option + Left</td>
+<td>列选择 向左</td>
+</tr>
+<tr>
+<td>Command + Shift + Option + Right</td>
+<td>列选择 向右</td>
+</tr>
+<tr>
+<td>Command + Shift + Option + PgUp</td>
+<td>列选择 向上翻页</td>
+</tr>
+<tr>
+<td>Command + Shift + Option + PgDown</td>
+<td>列选择 向下翻页</td>
+</tr>
+</tbody>
+</table>
+<h3 id="查找替换"><a href="#查找替换" class="headerlink" title="查找替换"></a>查找替换</h3><table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command + F</td>
+<td>查找</td>
+</tr>
+<tr>
+<td>Command + Option + F</td>
+<td>替换</td>
+</tr>
+<tr>
+<td>Command + G</td>
+<td>查找下一个</td>
+</tr>
+<tr>
+<td>Command + Shift + G</td>
+<td>查找上一个</td>
+</tr>
+<tr>
+<td>Option + Enter</td>
+<td>选中所有匹配项</td>
+</tr>
+<tr>
+<td>Command + D</td>
+<td>向下选中相同内容</td>
+</tr>
+<tr>
+<td>Command + K Command + D</td>
+<td>移除前一个向下选中相同内容</td>
+</tr>
+</tbody>
+</table>
+<h3 id="进阶"><a href="#进阶" class="headerlink" title="进阶"></a>进阶</h3><table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ctrl + Space</td>
+<td>打开建议</td>
+</tr>
+<tr>
+<td>Command + Shift + Space</td>
+<td>参数提示</td>
+</tr>
+<tr>
+<td>Tab Emmet</td>
+<td>插件缩写补全</td>
+</tr>
+<tr>
+<td>Option + Shift + F</td>
+<td>格式化</td>
+</tr>
+<tr>
+<td>Command + K Command + F</td>
+<td>格式化选中内容</td>
+</tr>
+<tr>
+<td>F12</td>
+<td>跳转到声明位置</td>
+</tr>
+<tr>
+<td>Option + F12</td>
+<td>查看具体声明内容</td>
+</tr>
+<tr>
+<td>Command + K F12</td>
+<td>分屏查看具体声明内容</td>
+</tr>
+<tr>
+<td>Command + .</td>
+<td>快速修复</td>
+</tr>
+<tr>
+<td>Shift + F12</td>
+<td>显示引用</td>
+</tr>
+<tr>
+<td>F2</td>
+<td>重命名符号</td>
+</tr>
+<tr>
+<td>Command + Shift + .</td>
+<td>替换为上一个值</td>
+</tr>
+<tr>
+<td>Command + Shift + ,</td>
+<td>替换为下一个值</td>
+</tr>
+<tr>
+<td>Command + K Command + X</td>
+<td>删除行尾多余空格</td>
+</tr>
+<tr>
+<td>Command + K M</td>
+<td>更改文件语言</td>
+</tr>
+</tbody>
+</table>
+<h3 id="导航"><a href="#导航" class="headerlink" title="导航"></a>导航</h3><table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command + T</td>
+<td>显示所有符号</td>
+</tr>
+<tr>
+<td>Ctrl + G</td>
+<td>跳转至某行</td>
+</tr>
+<tr>
+<td>Command + P</td>
+<td>跳转到某个文件</td>
+</tr>
+<tr>
+<td>Command + Shift + O</td>
+<td>跳转到某个符号</td>
+</tr>
+<tr>
+<td>Command + Shift + M</td>
+<td>打开问题面板</td>
+</tr>
+<tr>
+<td>F8</td>
+<td>下一个错误或警告位置</td>
+</tr>
+<tr>
+<td>Shift + F8</td>
+<td>上一个错误或警告位置</td>
+</tr>
+<tr>
+<td>Ctrl + Shift + Tab</td>
+<td>编辑器历史记录</td>
+</tr>
+<tr>
+<td>Ctrl + -</td>
+<td>后退</td>
+</tr>
+<tr>
+<td>Ctrl + Shift + -</td>
+<td>前进</td>
+</tr>
+<tr>
+<td>Ctrl + Shift + M Tab</td>
+<td>切换焦点</td>
+</tr>
+</tbody>
+</table>
+<h3 id="编辑器管理"><a href="#编辑器管理" class="headerlink" title="编辑器管理"></a>编辑器管理</h3><table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command + W</td>
+<td>关闭编辑器</td>
+</tr>
+<tr>
+<td>Command + K F</td>
+<td>关闭文件夹</td>
+</tr>
+<tr>
+<td>Command + \</td>
+<td>编辑器分屏</td>
+</tr>
+<tr>
+<td>Command + 1</td>
+<td>切换到第一分组</td>
+</tr>
+<tr>
+<td>Command + 2</td>
+<td>切换到第二分组</td>
+</tr>
+<tr>
+<td>Command + 3</td>
+<td>切换到第三分组</td>
+</tr>
+<tr>
+<td>Command + K Command + Left</td>
+<td>切换到上一分组</td>
+</tr>
+<tr>
+<td>Command + K Command + Right</td>
+<td>切换到下一分组</td>
+</tr>
+<tr>
+<td>Command + K Command + Shift + Left</td>
+<td>左移编辑器</td>
+</tr>
+<tr>
+<td>Command + K Command + Shift + Right</td>
+<td>右移编辑器</td>
+</tr>
+<tr>
+<td>Command + K Left</td>
+<td>激活左侧编辑组</td>
+</tr>
+<tr>
+<td>Command + K Right</td>
+<td>激活右侧编辑组</td>
+</tr>
+</tbody>
+</table>
+<h3 id="文件管理"><a href="#文件管理" class="headerlink" title="文件管理"></a>文件管理</h3><table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command + N</td>
+<td>新建文件</td>
+</tr>
+<tr>
+<td>Command + O</td>
+<td>打开文件</td>
+</tr>
+<tr>
+<td>Command + S</td>
+<td>保存文件</td>
+</tr>
+<tr>
+<td>Command + Shift + S</td>
+<td>另存为</td>
+</tr>
+<tr>
+<td>Command + Option + S</td>
+<td>全部保存</td>
+</tr>
+<tr>
+<td>Command + W</td>
+<td>关闭</td>
+</tr>
+<tr>
+<td>Command + K Command + W</td>
+<td>全部关闭</td>
+</tr>
+<tr>
+<td>Command + Shift + T</td>
+<td>重新打开被关闭的编辑器</td>
+</tr>
+<tr>
+<td>Command + K Enter</td>
+<td>保持打开</td>
+</tr>
+<tr>
+<td>Ctrl + Tab</td>
+<td>打开下一个</td>
+</tr>
+<tr>
+<td>Ctrl + Shift + Tab</td>
+<td>打开上一个</td>
+</tr>
+<tr>
+<td>Command + K P</td>
+<td>复制当前文件路径</td>
+</tr>
+<tr>
+<td>Command + K R</td>
+<td>在资源管理器中查看当前文件</td>
+</tr>
+<tr>
+<td>Command + K O</td>
+<td>新窗口打开当前文件</td>
+</tr>
+</tbody>
+</table>
+<h3 id="显示"><a href="#显示" class="headerlink" title="显示"></a>显示</h3><table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command + Ctrl + F</td>
+<td>全屏、退出全屏</td>
+</tr>
+<tr>
+<td>Command + Option + 1</td>
+<td>切换编辑器分屏方式（横、竖）</td>
+</tr>
+<tr>
+<td>Command + +</td>
+<td>放大</td>
+</tr>
+<tr>
+<td>Command + -</td>
+<td>缩小</td>
+</tr>
+<tr>
+<td>Command + B</td>
+<td>显示、隐藏侧边栏</td>
+</tr>
+<tr>
+<td>Command + Shift + E</td>
+<td>显示资源管理器 或 切换焦点</td>
+</tr>
+<tr>
+<td>Command + Shift + F</td>
+<td>显示搜索框</td>
+</tr>
+<tr>
+<td>Ctrl + Shift + G</td>
+<td>显示Git面板</td>
+</tr>
+<tr>
+<td>Command + Shift + D</td>
+<td>显示调试面板</td>
+</tr>
+<tr>
+<td>Command + Shift + X</td>
+<td>显示插件面板</td>
+</tr>
+<tr>
+<td>Command + Shift + H</td>
+<td>全局搜索替换</td>
+</tr>
+<tr>
+<td>Command + Shift + J</td>
+<td>显示、隐藏高级搜索</td>
+</tr>
+<tr>
+<td>Command + Shift + C</td>
+<td>打开新终端</td>
+</tr>
+<tr>
+<td>Command + Shift + U</td>
+<td>显示输出面板</td>
+</tr>
+<tr>
+<td>Command + Shift + V</td>
+<td>Markdown预览窗口</td>
+</tr>
+<tr>
+<td>Command + K V</td>
+<td>分屏显示 Markdown预览窗口</td>
+</tr>
+</tbody>
+</table>
+<h3 id="调试"><a href="#调试" class="headerlink" title="调试"></a>调试</h3><table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F9</td>
+<td>设置 或 取消断点</td>
+</tr>
+<tr>
+<td>F5</td>
+<td>开始 或 继续</td>
+</tr>
+<tr>
+<td>F11</td>
+<td>进入</td>
+</tr>
+<tr>
+<td>Shift + F11</td>
+<td>跳出</td>
+</tr>
+<tr>
+<td>F10</td>
+<td>跳过</td>
+</tr>
+<tr>
+<td>Command + K Command + I</td>
+<td>显示悬停信息</td>
+</tr>
+</tbody>
+</table>
+<h3 id="集成终端"><a href="#集成终端" class="headerlink" title="集成终端"></a>集成终端</h3><table>
+<thead>
+<tr>
+<th>快捷键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ctrl + `</td>
+<td>显示终端</td>
+</tr>
+<tr>
+<td>Ctrl + Shift + `</td>
+<td>新建终端</td>
+</tr>
+<tr>
+<td>Command + Up</td>
+<td>向上滚动</td>
+</tr>
+<tr>
+<td>Command + Down</td>
+<td>向下滚动</td>
+</tr>
+<tr>
+<td>PgUp</td>
+<td>向上翻页</td>
+</tr>
+<tr>
+<td>PgDown</td>
+<td>向下翻页</td>
+</tr>
+<tr>
+<td>Command + Home</td>
+<td>滚动到顶部</td>
+</tr>
+<tr>
+<td>Command + End</td>
+<td>滚动到底部</td>
+</tr>
+</tbody>
+</table>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/11/29/data-structure-algorithm-02/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/11/29/data-structure-algorithm-02/" itemprop="url">未命名</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-11-29T18:16:33+08:00">
+                2019-11-29
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="数组"><a href="#数组" class="headerlink" title="数组"></a>数组</h2><p>定义：数组是一组线性表数据结构，它用一组连续的内存空间，来存储一组具有相同类型的数据。</p>
+<p>特点：支持随机访问，但插入和删除比较低效，平均时间复杂度为O(n)</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/11/28/data-structure-algorithm-01/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/11/28/data-structure-algorithm-01/" itemprop="url">未命名</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-11-28T18:57:15+08:00">
+                2019-11-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="复杂度分析"><a href="#复杂度分析" class="headerlink" title="复杂度分析"></a>复杂度分析</h2><h3 id="事后统计法"><a href="#事后统计法" class="headerlink" title="事后统计法"></a>事后统计法</h3><p>事后统计法是指把需要的统计代码跑一遍，通过统计、监控，就能得到算法执行的时间和占用的内存大小。这种统计方法非常有局限性。</p>
+<h4 id="事后统计法局限性"><a href="#事后统计法局限性" class="headerlink" title="事后统计法局限性"></a>事后统计法局限性</h4><ol>
+<li>测试结果非常依赖测试环境</li>
+<li>测试结果受数据规模的影响很大</li>
+</ol>
+<h3 id="大O复杂度表示法"><a href="#大O复杂度表示法" class="headerlink" title="大O复杂度表示法"></a>大O复杂度表示法</h3><p><strong>所有代码的执行时间 T(n) 与每行代码的执行次数 n 成正比。</strong></p>
+<p><strong><em>T(n) = O(f(n))</em></strong></p>
+<ul>
+<li>T(n) 它表示代码执行的时间；</li>
+<li>n 表示数据规模的大小；</li>
+<li>f(n) 表示每行代码执行的次数总和。因为这是一个公式，所以用 f(n) 来表示。</li>
+<li>公式中的 O，表示代码的执行时间 T(n) 与 f(n) 表达式成正比。</li>
+</ul>
+<h3 id="时间复杂度分析"><a href="#时间复杂度分析" class="headerlink" title="时间复杂度分析"></a>时间复杂度分析</h3><p>在分析时间复杂度的时候比较实用的方法有下面几个：</p>
+<ol>
+<li><p>只关注循环执行次数最多的一段代码</p>
+</li>
+<li><p>加法法则：总复杂度等于量级最大的那段代码的复杂度</p>
+</li>
+<li><p>乘法法则：嵌套代码的复杂度等于嵌套内外代码复杂度的乘积</p>
+</li>
+</ol>
+<h3 id="几种常见的时间复杂度"><a href="#几种常见的时间复杂度" class="headerlink" title="几种常见的时间复杂度"></a>几种常见的时间复杂度</h3><p>常见的时间复杂度从低阶到高阶分别为：</p>
+<ol>
+<li>常量阶：O(1)</li>
+<li>对数阶：O(logn)</li>
+<li>线性阶：O(n)</li>
+<li>线性对数阶：O(nlogn)</li>
+<li>平方阶：O($n^2$)</li>
+<li>指数阶：O($2^n$)</li>
+<li>阶乘阶：O(n!)</li>
+</ol>
+<h3 id="最好、最坏情况时间复杂度"><a href="#最好、最坏情况时间复杂度" class="headerlink" title="最好、最坏情况时间复杂度"></a>最好、最坏情况时间复杂度</h3><p>下面看如下代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">// n表示数组array的长度</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">find</span><span class="params">(<span class="keyword">int</span>[] array, <span class="keyword">int</span> n, <span class="keyword">int</span> x)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> i = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">int</span> pos = -<span class="number">1</span>;</span><br><span class="line">  <span class="keyword">for</span> (; i &lt; n; ++i) &#123;</span><br><span class="line">    <span class="keyword">if</span> (array[i] == x) &#123;</span><br><span class="line">       pos = i;</span><br><span class="line">       <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> pos;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>最好情况时间复杂度就是，在最理想的情况下，执行这段代码的时间复杂度，即上面循环只遍历一次就得到结果。</li>
+<li>最坏情况时间复杂度就是，在最糟糕的情况下，执行这段代码的时间复杂度，即上面循环把整个数组都遍历一遍</li>
+</ul>
+<h3 id="平均情况时间复杂度"><a href="#平均情况时间复杂度" class="headerlink" title="平均情况时间复杂度"></a>平均情况时间复杂度</h3><ul>
+<li>平均情况时间复杂度分析，可以先算出该段代码的加权平均值之后再来分析。</li>
+</ul>
+<h3 id="均摊时间复杂度"><a href="#均摊时间复杂度" class="headerlink" title="均摊时间复杂度"></a>均摊时间复杂度</h3><ul>
+<li>出现O(1)的次数远大于出现O(n)出现的次数，那么平均平摊时间复杂度就是O(1)</li>
+</ul>
+<h3 id="空间复杂度"><a href="#空间复杂度" class="headerlink" title="空间复杂度"></a>空间复杂度</h3><p>空间复杂度分析可以参考时间复杂度分析。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/11/20/linux-x86-framework/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/11/20/linux-x86-framework/" itemprop="url">未命名</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-11-20T09:59:29+08:00">
+                2019-11-20
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="X86架构"><a href="#X86架构" class="headerlink" title="X86架构"></a>X86架构</h2><h3 id="计算机的工作模式"><a href="#计算机的工作模式" class="headerlink" title="计算机的工作模式"></a>计算机的工作模式</h3><p><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g949y2inxmj31nk0rn0tj.jpg" alt=""></p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/11/13/design-pattern-01/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/11/13/design-pattern-01/" itemprop="url">未命名</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-11-13T19:08:05+08:00">
+                2019-11-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="面向对象"><a href="#面向对象" class="headerlink" title="面向对象"></a>面向对象</h2>
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/08/05/android-runtime-permission/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1152,7 +2643,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-count">10</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -1163,7 +2654,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-count">4</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -1174,7 +2665,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">9</span>
+                  <span class="site-state-item-count">10</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
@@ -1211,7 +2702,7 @@
 
     <footer id="footer" class="footer">
       <div class="footer-inner">
-        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
   <span class="with-love">
     <i class="fa fa-user"></i>
   </span>
