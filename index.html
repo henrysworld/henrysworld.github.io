@@ -252,6 +252,279 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/22/docker-harbor-install/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2021/08/22/docker-harbor-install/" itemprop="url">Harbor 私有仓库构建</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-08-22T19:29:07+08:00">
+                2021-08-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Docker/" itemprop="url" rel="index">
+                    <span itemprop="name">Docker</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h3 id="Harbor-私有仓库构建"><a href="#Harbor-私有仓库构建" class="headerlink" title="Harbor 私有仓库构建"></a>Harbor 私有仓库构建</h3><h4 id="一、Harbor-介绍"><a href="#一、Harbor-介绍" class="headerlink" title="一、Harbor 介绍"></a>一、Harbor 介绍</h4><p>Docker容器应用的开发和运行离不开可靠的镜像管理，虽然Docker官方也提供了公共的镜像仓库，但是从安全和效率等方面考虑，部署私有环境内的Registry也是非常必要的。Harbor是由VMware公司开源的企业级的Docker Registry管理项目，它包括权限管理(RBAC)、LDAP、日志审核、管理界面、自我注册、镜像复制和中文支持等功能</p>
+<h4 id="二、环境准备"><a href="#二、环境准备" class="headerlink" title="二、环境准备"></a>二、环境准备</h4><h5 id="1-硬件"><a href="#1-硬件" class="headerlink" title="1.硬件"></a>1.硬件</h5><table>
+<thead>
+<tr>
+<th>资源</th>
+<th>最低</th>
+<th>推荐</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>中央处理器</td>
+<td>2核</td>
+<td>4核</td>
+</tr>
+<tr>
+<td>内存</td>
+<td>4GB</td>
+<td>8GB</td>
+</tr>
+<tr>
+<td>粗盘</td>
+<td>40GB</td>
+<td>160GB</td>
+</tr>
+</tbody>
+</table>
+<h5 id="2-软件"><a href="#2-软件" class="headerlink" title="2.软件"></a>2.软件</h5><table>
+<thead>
+<tr>
+<th>关键</th>
+<th>版本</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Docker engine</td>
+<td>17.06.0-ce+以上</td>
+<td><a href="https://docs.docker.com/engine/install/" target="_blank" rel="noopener">https://docs.docker.com/engine/install/</a></td>
+</tr>
+<tr>
+<td>Docker Compose</td>
+<td>1.18.0以上</td>
+<td><a href="https://docs.docker.com/compose/install/" target="_blank" rel="noopener">https://docs.docker.com/compose/install/</a></td>
+</tr>
+<tr>
+<td>Openssl</td>
+<td>最新的优先</td>
+<td>用于为Harbor生成证书和密钥</td>
+</tr>
+</tbody>
+</table>
+<h5 id="3-网络端口"><a href="#3-网络端口" class="headerlink" title="3.网络端口"></a>3.网络端口</h5><p>Harbor要求在目标主机上打开以下端口</p>
+<table>
+<thead>
+<tr>
+<th>端口</th>
+<th>协议</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>443</td>
+<td>HTTPS</td>
+<td>Harbor和核心API接受此端口上的请求。可以在配置文件中更改此端口</td>
+</tr>
+<tr>
+<td>4443</td>
+<td>HTTPS</td>
+<td>连接到 Harbor 的 Docker Content Trust 服务。仅在启用 Notary 时才需要。您可以在配置文件中更改此端口。</td>
+</tr>
+<tr>
+<td>80</td>
+<td>HTTP</td>
+<td>Harbor和核心API接受此端口上的请求。可以在配置文件中更改此端口</td>
+</tr>
+</tbody>
+</table>
+<h4 id="三、下载Harbor安装程序"><a href="#三、下载Harbor安装程序" class="headerlink" title="三、下载Harbor安装程序"></a>三、下载Harbor安装程序</h4><h5 id="1-打开下载页面"><a href="#1-打开下载页面" class="headerlink" title="1.打开下载页面"></a>1.打开下载页面</h5><p><a href="https://github.com/goharbor/harbor/releases" target="_blank" rel="noopener">https://github.com/goharbor/harbor/releases</a></p>
+<h5 id="2-选择离线安装或者在线安装"><a href="#2-选择离线安装或者在线安装" class="headerlink" title="2.选择离线安装或者在线安装"></a>2.选择离线安装或者在线安装</h5><p><img src="http://blob.hixforever.com/image-20210822223328975.png" alt="image-20210822223328975"></p>
+<h5 id="3-使用tar提取安装包"><a href="#3-使用tar提取安装包" class="headerlink" title="3.使用tar提取安装包"></a>3.使用tar提取安装包</h5><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bash $ tar xzvf harbor-offline-installer-version.tgz</span><br></pre></td></tr></table></figure>
+<h4 id="四、配置HTTPS访问Harbor"><a href="#四、配置HTTPS访问Harbor" class="headerlink" title="四、配置HTTPS访问Harbor"></a>四、配置HTTPS访问Harbor</h4><h5 id="1-准备HTTPS证书"><a href="#1-准备HTTPS证书" class="headerlink" title="1.准备HTTPS证书"></a>1.准备HTTPS证书</h5><p>yourdomain.com.crt</p>
+<p>yourdomain.com.key</p>
+<h5 id="2-向Harbor和Docker提供证书"><a href="#2-向Harbor和Docker提供证书" class="headerlink" title="2.向Harbor和Docker提供证书"></a>2.向Harbor和Docker提供证书</h5><ol>
+<li><p>将服务器证书和密钥复制到 Harbor 主机上的 certficates 文件夹中。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cp yourdomain.com.crt /data/cert/</span><br><span class="line">cp yourdomain.com.key /data/cert/</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>转换<code>yourdomain.com.crt</code>为<code>yourdomain.com.cert</code>，供 Docker 使用。<br>Docker 守护进程将<code>.crt</code>文件解释为 CA 证书，将<code>.cert</code>文件解释为客户端证书。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl x509 -inform PEM -<span class="keyword">in</span> yourdomain.com.crt -out yourdomain.com.cert</span><br></pre></td></tr></table></figure>
+<p><img src="http://blob.hixforever.com/image-20210822225823851.png" alt="image-20210822225823851"></p>
+</li>
+<li><p>重启Docker引擎</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl restart docker</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h5 id="3-配置Harbor-YML文件"><a href="#3-配置Harbor-YML文件" class="headerlink" title="3.配置Harbor YML文件"></a>3.配置Harbor YML文件</h5><ol>
+<li><p>在harbor的安装目录下找到<code>harbor.yml.tmpl</code>并复制一份</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cp harbor.yml.tmpl harbor.ymls</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="2">
+<li><p>配置主机名</p>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># The IP address or hostname to access admin UI and registry service.</span></span><br><span class="line"><span class="comment"># DO NOT use localhost or 127.0.0.1, because Harbor needs to be accessed by external clients.</span></span><br><span class="line"><span class="attr">hostname:</span> <span class="string">yourdomain.com</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="3">
+<li><p>配置HTTPS的证书</p>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">https:</span></span><br><span class="line">  <span class="comment"># https port for harbor, default is 443</span></span><br><span class="line"><span class="attr">  port:</span> <span class="number">443</span></span><br><span class="line">  <span class="comment"># The path of cert and key files for nginx</span></span><br><span class="line"><span class="attr">  certificate:</span> <span class="string">/var/lib/sse/keys/yourdomain.com.crt</span></span><br><span class="line"><span class="attr">  private_key:</span> <span class="string">/var/lib/sse/keys/yourdomain.com.key</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>配置镜像数据存放地址</p>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># The default data volume</span></span><br><span class="line"><span class="attr">data_volume:</span> <span class="string">/var/lib/sse/data</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>指定管理员密码</p>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># The initial password of Harbor admin</span></span><br><span class="line"><span class="comment"># It only works in first time to install harbor</span></span><br><span class="line"><span class="comment"># Remember Change the admin password from UI after launching Harbor.</span></span><br><span class="line"><span class="attr">harbor_admin_password:</span> <span class="string">Harbor12345</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h5 id="4-部署或重新配置Harbor"><a href="#4-部署或重新配置Harbor" class="headerlink" title="4.部署或重新配置Harbor"></a>4.部署或重新配置Harbor</h5><ol>
+<li><p>运行<code>prepare</code>脚本以启用 HTTPS。</p>
+<p>Harbor 使用一个<code>nginx</code>实例作为所有服务的反向代理。您可以使用<code>prepare</code>脚本进行配置<code>nginx</code>以使用 HTTPS。该<code>prepare</code>在Harbor的安装包，在同级别的<code>install.sh</code>脚本。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">./prepare</span><br><span class="line">./install.sh</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>如果 Harbor 正在运行，请停止并删除现有实例。</p>
+<p>您的镜像数据保留在文件系统中，因此不会丢失任何数据。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker-compose down -v</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>重启 Harbor</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker-compose up -d</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h4 id="五、测试访问"><a href="#五、测试访问" class="headerlink" title="五、测试访问"></a>五、测试访问</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://yourdomain.com</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/01/15/mysql-move-datadir/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -365,13 +638,13 @@
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl stop mysqld.service</span><br></pre></td></tr></table></figure>
 </li>
 <li><p>复制原数据目录的数据到将要迁移的数据目录</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 1.进入挂载的数据盘目录</span><br><span class="line"><span class="meta">shell&gt;</span> cd /mnt/sse/</span><br><span class="line"><span class="meta">#</span> 2.将原数据目录下的文件复制到将要迁移的目录，注意这里cp要加 -a，需要保留原文件属性</span><br><span class="line"><span class="meta">shell&gt;</span> cp -a -r /var/lib/mysql/ ./</span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.进入挂载的数据盘目录</span></span><br><span class="line"><span class="meta">shell&gt;</span><span class="bash"> <span class="built_in">cd</span> /mnt/sse/</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 2.将原数据目录下的文件复制到将要迁移的目录，注意这里cp要加 -a，需要保留原文件属性</span></span><br><span class="line"><span class="meta">shell&gt;</span><span class="bash"> cp -a -r /var/lib/mysql/ ./</span></span><br></pre></td></tr></table></figure>
 </li>
 <li><p>修改/etc/my.cnf文件中的配置。</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[mysqld]</span><br><span class="line">skip-log-bin</span><br><span class="line">datadir=/mnt/sse/mysql</span><br><span class="line">socket=/mnt/sse/mysql/mysql.sock</span><br><span class="line">[client]</span><br><span class="line"><span class="meta">#</span> 如果不设置这句的话，登录数据库的时候会报：ERROR 2002 (HY000): Can't connect to local MySQL server through socket '/var/lib/mysql/mysql.sock' (2)</span><br><span class="line">socket=/mnt/sse/mysql/mysql.sock</span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[mysqld]</span><br><span class="line">skip-log-bin</span><br><span class="line">datadir=/mnt/sse/mysql</span><br><span class="line">socket=/mnt/sse/mysql/mysql.sock</span><br><span class="line">[client]</span><br><span class="line"><span class="meta">#</span><span class="bash"> 如果不设置这句的话，登录数据库的时候会报：ERROR 2002 (HY000): Can<span class="string">'t connect to local MySQL server through socket '</span>/var/lib/mysql/mysql.sock<span class="string">' (2)</span></span></span><br><span class="line">socket=/mnt/sse/mysql/mysql.sock</span><br></pre></td></tr></table></figure>
 </li>
 <li><p>开启mysql</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 这里一定需要使用start,不能用restart,否则会出现问题</span><br><span class="line">systemctl start mysqld</span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 这里一定需要使用start,不能用restart,否则会出现问题</span></span><br><span class="line">systemctl start mysqld</span><br></pre></td></tr></table></figure>
 </li>
 </ol>
 
@@ -2323,7 +2596,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-count">8</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -2334,7 +2607,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-count">6</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -2345,7 +2618,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-count">15</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>

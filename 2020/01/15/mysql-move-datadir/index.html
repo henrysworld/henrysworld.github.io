@@ -362,13 +362,13 @@
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl stop mysqld.service</span><br></pre></td></tr></table></figure>
 </li>
 <li><p>复制原数据目录的数据到将要迁移的数据目录</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 1.进入挂载的数据盘目录</span><br><span class="line"><span class="meta">shell&gt;</span> cd /mnt/sse/</span><br><span class="line"><span class="meta">#</span> 2.将原数据目录下的文件复制到将要迁移的目录，注意这里cp要加 -a，需要保留原文件属性</span><br><span class="line"><span class="meta">shell&gt;</span> cp -a -r /var/lib/mysql/ ./</span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.进入挂载的数据盘目录</span></span><br><span class="line"><span class="meta">shell&gt;</span><span class="bash"> <span class="built_in">cd</span> /mnt/sse/</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 2.将原数据目录下的文件复制到将要迁移的目录，注意这里cp要加 -a，需要保留原文件属性</span></span><br><span class="line"><span class="meta">shell&gt;</span><span class="bash"> cp -a -r /var/lib/mysql/ ./</span></span><br></pre></td></tr></table></figure>
 </li>
 <li><p>修改/etc/my.cnf文件中的配置。</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[mysqld]</span><br><span class="line">skip-log-bin</span><br><span class="line">datadir=/mnt/sse/mysql</span><br><span class="line">socket=/mnt/sse/mysql/mysql.sock</span><br><span class="line">[client]</span><br><span class="line"><span class="meta">#</span> 如果不设置这句的话，登录数据库的时候会报：ERROR 2002 (HY000): Can't connect to local MySQL server through socket '/var/lib/mysql/mysql.sock' (2)</span><br><span class="line">socket=/mnt/sse/mysql/mysql.sock</span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[mysqld]</span><br><span class="line">skip-log-bin</span><br><span class="line">datadir=/mnt/sse/mysql</span><br><span class="line">socket=/mnt/sse/mysql/mysql.sock</span><br><span class="line">[client]</span><br><span class="line"><span class="meta">#</span><span class="bash"> 如果不设置这句的话，登录数据库的时候会报：ERROR 2002 (HY000): Can<span class="string">'t connect to local MySQL server through socket '</span>/var/lib/mysql/mysql.sock<span class="string">' (2)</span></span></span><br><span class="line">socket=/mnt/sse/mysql/mysql.sock</span><br></pre></td></tr></table></figure>
 </li>
 <li><p>开启mysql</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 这里一定需要使用start,不能用restart,否则会出现问题</span><br><span class="line">systemctl start mysqld</span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 这里一定需要使用start,不能用restart,否则会出现问题</span></span><br><span class="line">systemctl start mysqld</span><br></pre></td></tr></table></figure>
 </li>
 </ol>
 
@@ -412,6 +412,10 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/08/22/docker-harbor-install/" rel="prev" title="Harbor 私有仓库构建">
+                Harbor 私有仓库构建 <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -492,7 +496,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-count">8</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -503,7 +507,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-count">6</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -514,7 +518,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-count">15</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
