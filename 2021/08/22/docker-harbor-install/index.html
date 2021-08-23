@@ -87,13 +87,13 @@
 <meta property="og:site_name" content="宁静的世界">
 <meta property="og:description" content="Harbor 私有仓库构建一、Harbor 介绍Docker容器应用的开发和运行离不开可靠的镜像管理，虽然Docker官方也提供了公共的镜像仓库，但是从安全和效率等方面考虑，部署私有环境内的Registry也是非常必要的。Harbor是由VMware公司开源的企业级的Docker Registry管理项目，它包括权限管理(RBAC)、LDAP、日志审核、管理界面、自我注册、镜像复制和中文支持等功能">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="http://blob.hixforever.com/image-20210822223328975.png">
-<meta property="og:image" content="http://blob.hixforever.com/image-20210822225823851.png">
-<meta property="og:updated_time" content="2021-08-23T03:29:13.655Z">
+<meta property="og:image" content="https://blob.hixforever.com/image-20210822223328975.png">
+<meta property="og:image" content="https://blob.hixforever.com/image-20210822225823851.png">
+<meta property="og:updated_time" content="2021-08-23T05:56:30.856Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Harbor 私有仓库构建">
 <meta name="twitter:description" content="Harbor 私有仓库构建一、Harbor 介绍Docker容器应用的开发和运行离不开可靠的镜像管理，虽然Docker官方也提供了公共的镜像仓库，但是从安全和效率等方面考虑，部署私有环境内的Registry也是非常必要的。Harbor是由VMware公司开源的企业级的Docker Registry管理项目，它包括权限管理(RBAC)、LDAP、日志审核、管理界面、自我注册、镜像复制和中文支持等功能">
-<meta name="twitter:image" content="http://blob.hixforever.com/image-20210822223328975.png">
+<meta name="twitter:image" content="https://blob.hixforever.com/image-20210822223328975.png">
 
 
 
@@ -426,7 +426,7 @@
 </tbody>
 </table>
 <h4 id="三、下载Harbor安装程序"><a href="#三、下载Harbor安装程序" class="headerlink" title="三、下载Harbor安装程序"></a>三、下载Harbor安装程序</h4><h5 id="1-打开下载页面"><a href="#1-打开下载页面" class="headerlink" title="1.打开下载页面"></a>1.打开下载页面</h5><p><a href="https://github.com/goharbor/harbor/releases" target="_blank" rel="noopener">https://github.com/goharbor/harbor/releases</a></p>
-<h5 id="2-选择离线安装或者在线安装"><a href="#2-选择离线安装或者在线安装" class="headerlink" title="2.选择离线安装或者在线安装"></a>2.选择离线安装或者在线安装</h5><p><img src="http://blob.hixforever.com/image-20210822223328975.png" alt=""></p>
+<h5 id="2-选择离线安装或者在线安装"><a href="#2-选择离线安装或者在线安装" class="headerlink" title="2.选择离线安装或者在线安装"></a>2.选择离线安装或者在线安装</h5><p><img src="https://blob.hixforever.com/image-20210822223328975.png" alt=""></p>
 <h5 id="3-使用tar提取安装包"><a href="#3-使用tar提取安装包" class="headerlink" title="3.使用tar提取安装包"></a>3.使用tar提取安装包</h5><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bash $ tar xzvf harbor-offline-installer-version.tgz</span><br></pre></td></tr></table></figure>
 <h4 id="四、配置HTTPS访问Harbor"><a href="#四、配置HTTPS访问Harbor" class="headerlink" title="四、配置HTTPS访问Harbor"></a>四、配置HTTPS访问Harbor</h4><h5 id="1-准备HTTPS证书"><a href="#1-准备HTTPS证书" class="headerlink" title="1.准备HTTPS证书"></a>1.准备HTTPS证书</h5><p>yourdomain.com.crt</p>
 <p>yourdomain.com.key</p>
@@ -436,7 +436,7 @@
 </li>
 <li><p>转换<code>yourdomain.com.crt</code>为<code>yourdomain.com.cert</code>，供 Docker 使用。<br>Docker 守护进程将<code>.crt</code>文件解释为 CA 证书，将<code>.cert</code>文件解释为客户端证书。</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl x509 -inform PEM -<span class="keyword">in</span> yourdomain.com.crt -out yourdomain.com.cert</span><br></pre></td></tr></table></figure>
-<p><img src="http://blob.hixforever.com/image-20210822225823851.png" alt=""></p>
+<p><img src="https://blob.hixforever.com/image-20210822225823851.png" alt=""></p>
 </li>
 <li><p>重启Docker引擎</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl restart docker</span><br></pre></td></tr></table></figure>
