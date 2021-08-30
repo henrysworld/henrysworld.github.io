@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="时间复杂度,空间复杂度," />
+  <meta name="keywords" content="Docker," />
 
 
 
@@ -79,18 +79,20 @@
 
 
 
-<meta name="description" content="事后统计法事后统计法是指把需要的统计代码跑一遍，通过统计、监控，就能得到算法执行的时间和占用的内存大小。这种统计方法非常有局限性。 事后统计法局限性 测试结果非常依赖测试环境 测试结果受数据规模的影响很大  大O复杂度表示法所有代码的执行时间 T(n) 与每行代码的执行次数 n 成正比。 T(n) = O(f(n))  T(n) 它表示代码执行的时间； n 表示数据规模的大小； f(n) 表示每行">
-<meta name="keywords" content="时间复杂度,空间复杂度">
+<meta name="description" content="Docker 环境安装及问题处理一、Dokcer安装我们要安装一个目前最主流的容器技术的实现 Docker。假设我们的操作系统是 CentOS，你可以参考https://docs.docker.com/install/linux/docker-ce/centos/这个官方文档，进行安装。  第一步，删除原有版本的 Docker。 12345678sudo yum remove docker \">
+<meta name="keywords" content="Docker">
 <meta property="og:type" content="article">
-<meta property="og:title" content="算法复杂度分析">
-<meta property="og:url" content="http://yoursite.com/2019/11/28/data-structure-algorithm-01/index.html">
+<meta property="og:title" content="Docker 环境安装及问题处理">
+<meta property="og:url" content="http://yoursite.com/2021/08/27/docker--docker-install/index.html">
 <meta property="og:site_name" content="宁静的世界">
-<meta property="og:description" content="事后统计法事后统计法是指把需要的统计代码跑一遍，通过统计、监控，就能得到算法执行的时间和占用的内存大小。这种统计方法非常有局限性。 事后统计法局限性 测试结果非常依赖测试环境 测试结果受数据规模的影响很大  大O复杂度表示法所有代码的执行时间 T(n) 与每行代码的执行次数 n 成正比。 T(n) = O(f(n))  T(n) 它表示代码执行的时间； n 表示数据规模的大小； f(n) 表示每行">
+<meta property="og:description" content="Docker 环境安装及问题处理一、Dokcer安装我们要安装一个目前最主流的容器技术的实现 Docker。假设我们的操作系统是 CentOS，你可以参考https://docs.docker.com/install/linux/docker-ce/centos/这个官方文档，进行安装。  第一步，删除原有版本的 Docker。 12345678sudo yum remove docker \">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2021-08-07T02:59:33.592Z">
+<meta property="og:image" content="https://blob.hixforever.com/image-20210827153751349.png">
+<meta property="og:updated_time" content="2021-08-30T10:19:32.879Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="算法复杂度分析">
-<meta name="twitter:description" content="事后统计法事后统计法是指把需要的统计代码跑一遍，通过统计、监控，就能得到算法执行的时间和占用的内存大小。这种统计方法非常有局限性。 事后统计法局限性 测试结果非常依赖测试环境 测试结果受数据规模的影响很大  大O复杂度表示法所有代码的执行时间 T(n) 与每行代码的执行次数 n 成正比。 T(n) = O(f(n))  T(n) 它表示代码执行的时间； n 表示数据规模的大小； f(n) 表示每行">
+<meta name="twitter:title" content="Docker 环境安装及问题处理">
+<meta name="twitter:description" content="Docker 环境安装及问题处理一、Dokcer安装我们要安装一个目前最主流的容器技术的实现 Docker。假设我们的操作系统是 CentOS，你可以参考https://docs.docker.com/install/linux/docker-ce/centos/这个官方文档，进行安装。  第一步，删除原有版本的 Docker。 12345678sudo yum remove docker \">
+<meta name="twitter:image" content="https://blob.hixforever.com/image-20210827153751349.png">
 
 
 
@@ -120,13 +122,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/11/28/data-structure-algorithm-01/"/>
+  <link rel="canonical" href="http://yoursite.com/2021/08/27/docker--docker-install/"/>
 
 
 
 
 
-  <title>算法复杂度分析 | 宁静的世界</title>
+  <title>Docker 环境安装及问题处理 | 宁静的世界</title>
   
 
 
@@ -253,7 +255,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/11/28/data-structure-algorithm-01/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/27/docker--docker-install/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Henry Ch">
@@ -270,7 +272,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">算法复杂度分析</h1>
+          <h1 class="post-title" itemprop="name headline">Docker 环境安装及问题处理</h1>
         
 
         <div class="post-meta">
@@ -282,8 +284,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-11-28T18:57:15+08:00">
-                2019-11-28
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-08-27T15:22:30+08:00">
+                2021-08-27
               </time>
             
 
@@ -305,8 +307,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/算法、数据结构/" itemprop="url" rel="index">
-                    <span itemprop="name">算法、数据结构</span>
+                  <a href="/categories/Docker/" itemprop="url" rel="index">
+                    <span itemprop="name">Docker</span>
                   </a>
                 </span>
 
@@ -342,51 +344,54 @@
       
 
       
-        <h3 id="事后统计法"><a href="#事后统计法" class="headerlink" title="事后统计法"></a>事后统计法</h3><p>事后统计法是指把需要的统计代码跑一遍，通过统计、监控，就能得到算法执行的时间和占用的内存大小。这种统计方法非常有局限性。</p>
-<h4 id="事后统计法局限性"><a href="#事后统计法局限性" class="headerlink" title="事后统计法局限性"></a>事后统计法局限性</h4><ol>
-<li>测试结果非常依赖测试环境</li>
-<li>测试结果受数据规模的影响很大</li>
-</ol>
-<h3 id="大O复杂度表示法"><a href="#大O复杂度表示法" class="headerlink" title="大O复杂度表示法"></a>大O复杂度表示法</h3><p><strong>所有代码的执行时间 T(n) 与每行代码的执行次数 n 成正比。</strong></p>
-<p><strong><em>T(n) = O(f(n))</em></strong></p>
-<ul>
-<li>T(n) 它表示代码执行的时间；</li>
-<li>n 表示数据规模的大小；</li>
-<li>f(n) 表示每行代码执行的次数总和。因为这是一个公式，所以用 f(n) 来表示。</li>
-<li>公式中的 O，表示代码的执行时间 T(n) 与 f(n) 表达式成正比。</li>
-</ul>
-<h3 id="时间复杂度分析"><a href="#时间复杂度分析" class="headerlink" title="时间复杂度分析"></a>时间复杂度分析</h3><p>在分析时间复杂度的时候比较实用的方法有下面几个：</p>
+        <h3 id="Docker-环境安装及问题处理"><a href="#Docker-环境安装及问题处理" class="headerlink" title="Docker 环境安装及问题处理"></a>Docker 环境安装及问题处理</h3><h4 id="一、Dokcer安装"><a href="#一、Dokcer安装" class="headerlink" title="一、Dokcer安装"></a>一、Dokcer安装</h4><p>我们要安装一个目前最主流的容器技术的实现 Docker。假设我们的操作系统是 CentOS，你可以参考<a href="https://docs.docker.com/install/linux/docker-ce/centos/这个官方文档，进行安装。" target="_blank" rel="noopener">https://docs.docker.com/install/linux/docker-ce/centos/这个官方文档，进行安装。</a></p>
 <ol>
-<li><p>只关注循环执行次数最多的一段代码</p>
-</li>
-<li><p>加法法则：总复杂度等于量级最大的那段代码的复杂度</p>
-</li>
-<li><p>乘法法则：嵌套代码的复杂度等于嵌套内外代码复杂度的乘积</p>
+<li><p>第一步，删除原有版本的 Docker。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">sudo yum remove docker \</span><br><span class="line">                  docker-client \</span><br><span class="line">                  docker-client-latest \</span><br><span class="line">                  docker-common \</span><br><span class="line">                  docker-latest \</span><br><span class="line">                  docker-latest-logrotate \</span><br><span class="line">                  docker-logrotate \</span><br><span class="line">                  docker-engine</span><br></pre></td></tr></table></figure>
 </li>
 </ol>
-<h3 id="几种常见的时间复杂度"><a href="#几种常见的时间复杂度" class="headerlink" title="几种常见的时间复杂度"></a>几种常见的时间复杂度</h3><p>常见的时间复杂度从低阶到高阶分别为：</p>
+<ol start="2">
+<li><p>第二步，存储库安装，设置存储库</p>
+<p>安装<code>yum-utils</code>包（提供<code>yum-config-manager</code> 实用程序）并设置<strong>稳定</strong>存储库。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">sudo yum install -y yum-utils</span><br><span class="line">sudo yum-config-manager \</span><br><span class="line">    --add-repo \</span><br><span class="line">    https://download.docker.com/linux/centos/docker-ce.repo</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="3">
+<li><p>第三步，安装 Docker 引擎。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo yum install docker-ce docker-ce-cli containerd.io</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="4">
+<li><p>第四部，启动 Docker。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl start docker</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="5">
+<li><p>第五步，设置Docker开机自启</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl <span class="built_in">enable</span> docker</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h4 id="二、关于Docker命令对于普通用户的权限问题解决方案"><a href="#二、关于Docker命令对于普通用户的权限问题解决方案" class="headerlink" title="二、关于Docker命令对于普通用户的权限问题解决方案"></a>二、关于Docker命令对于普通用户的权限问题解决方案</h4><p>安装按Docker后，使用普通用户执行<code>docker ps</code>命令会出现如下错误。这是由于普通用户不具有使用docker权限。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get &quot;http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json&quot;: dial unix /var/run/docker.sock: connect: permission denied</span><br></pre></td></tr></table></figure>
+<p><img src="https://blob.hixforever.com/image-20210827153751349.png" alt="image-20210827153751349"></p>
+<p>解决方案：</p>
 <ol>
-<li>常量阶：O(1)</li>
-<li>对数阶：O(logn)</li>
-<li>线性阶：O(n)</li>
-<li>线性对数阶：O(nlogn)</li>
-<li>平方阶：O($n^2$)</li>
-<li>指数阶：O($2^n$)</li>
-<li>阶乘阶：O(n!)</li>
+<li><p>添加docker用户组</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">groupadd docker</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>把用户加入docker用户组</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gpasswd -a sse docker</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>查看是否添加成功</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /etc/group | grep <span class="string">'^docker'</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>更新用户组</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">newgrp docker</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>测试docker命令是否可以使用</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker ps</span><br></pre></td></tr></table></figure>
+</li>
 </ol>
-<h3 id="最好、最坏情况时间复杂度"><a href="#最好、最坏情况时间复杂度" class="headerlink" title="最好、最坏情况时间复杂度"></a>最好、最坏情况时间复杂度</h3><p>下面看如下代码：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">// n表示数组array的长度</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">find</span><span class="params">(<span class="keyword">int</span>[] array, <span class="keyword">int</span> n, <span class="keyword">int</span> x)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> i = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">int</span> pos = -<span class="number">1</span>;</span><br><span class="line">  <span class="keyword">for</span> (; i &lt; n; ++i) &#123;</span><br><span class="line">    <span class="keyword">if</span> (array[i] == x) &#123;</span><br><span class="line">       pos = i;</span><br><span class="line">       <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> pos;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li>最好情况时间复杂度就是，在最理想的情况下，执行这段代码的时间复杂度，即上面循环只遍历一次就得到结果。</li>
-<li>最坏情况时间复杂度就是，在最糟糕的情况下，执行这段代码的时间复杂度，即上面循环把整个数组都遍历一遍</li>
-</ul>
-<h3 id="平均情况时间复杂度"><a href="#平均情况时间复杂度" class="headerlink" title="平均情况时间复杂度"></a>平均情况时间复杂度</h3><ul>
-<li>平均情况时间复杂度分析，可以先算出该段代码的加权平均值之后再来分析。</li>
-</ul>
-<h3 id="均摊时间复杂度"><a href="#均摊时间复杂度" class="headerlink" title="均摊时间复杂度"></a>均摊时间复杂度</h3><ul>
-<li>出现O(1)的次数远大于出现O(n)出现的次数，那么平均平摊时间复杂度就是O(1)</li>
-</ul>
-<h3 id="空间复杂度"><a href="#空间复杂度" class="headerlink" title="空间复杂度"></a>空间复杂度</h3><p>空间复杂度分析可以参考时间复杂度分析。</p>
 
       
     </div>
@@ -404,9 +409,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/时间复杂度/" rel="tag"># 时间复杂度</a>
-          
-            <a href="/tags/空间复杂度/" rel="tag"># 空间复杂度</a>
+            <a href="/tags/Docker/" rel="tag"># Docker</a>
           
         </div>
       
@@ -419,8 +422,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/08/05/android-runtime-permission/" rel="next" title="Android 6.0运行时权限">
-                <i class="fa fa-chevron-left"></i> Android 6.0运行时权限
+              <a href="/2021/08/22/docker-harbor-install/" rel="next" title="Harbor 私有仓库构建">
+                <i class="fa fa-chevron-left"></i> Harbor 私有仓库构建
               </a>
             
           </div>
@@ -428,10 +431,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/12/06/vscode-keyboard-shortcuts/" rel="prev" title="Mac vscode快捷键">
-                Mac vscode快捷键 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -567,7 +566,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#事后统计法"><span class="nav-number">1.</span> <span class="nav-text">事后统计法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#事后统计法局限性"><span class="nav-number">1.1.</span> <span class="nav-text">事后统计法局限性</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#大O复杂度表示法"><span class="nav-number">2.</span> <span class="nav-text">大O复杂度表示法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#时间复杂度分析"><span class="nav-number">3.</span> <span class="nav-text">时间复杂度分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#几种常见的时间复杂度"><span class="nav-number">4.</span> <span class="nav-text">几种常见的时间复杂度</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#最好、最坏情况时间复杂度"><span class="nav-number">5.</span> <span class="nav-text">最好、最坏情况时间复杂度</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#平均情况时间复杂度"><span class="nav-number">6.</span> <span class="nav-text">平均情况时间复杂度</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#均摊时间复杂度"><span class="nav-number">7.</span> <span class="nav-text">均摊时间复杂度</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#空间复杂度"><span class="nav-number">8.</span> <span class="nav-text">空间复杂度</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Docker-环境安装及问题处理"><span class="nav-number">1.</span> <span class="nav-text">Docker 环境安装及问题处理</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、Dokcer安装"><span class="nav-number">1.1.</span> <span class="nav-text">一、Dokcer安装</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#二、关于Docker命令对于普通用户的权限问题解决方案"><span class="nav-number">1.2.</span> <span class="nav-text">二、关于Docker命令对于普通用户的权限问题解决方案</span></a></li></ol></li></ol></div>
             
 
           </div>
