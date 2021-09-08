@@ -252,6 +252,724 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/09/07/redis-redis-stream/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2021/09/07/redis-redis-stream/" itemprop="url">基于Redis的消息队列解决方案</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-09-07T17:31:33+08:00">
+                2021-09-07
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Redis/" itemprop="url" rel="index">
+                    <span itemprop="name">Redis</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h3 id="基于Redis的消息队列解决方案"><a href="#基于Redis的消息队列解决方案" class="headerlink" title="基于Redis的消息队列解决方案"></a>基于Redis的消息队列解决方案</h3><p>现在的互联网应用基本上都是采用分布式系统架构进行设计的，而很多分布式系统必备的一个基础软件就是消息队列。</p>
+<p>消息队列要能支持组件通信消息的快速读写，而 Redis 本身支持数据的高速访问，正好可以满足消息队列的读写性能需求。不过，除了性能，消息队列还有其他的要求，所以，很多人都很关心一个问题：“Redis 适合做消息队列吗？”</p>
+<p>其实，这个问题的背后，隐含着两方面的核心问题：</p>
+<ul>
+<li>消息队列的消息存取需求是什么？</li>
+<li>Redis 如何实现消息队列的需求？</li>
+</ul>
+<p>只有把这两方面的知识和实践经验串连起来，才能彻底理解基于 Redis 实现消息队列的技术实践。以后需要为分布式系统组件做消息队列选型时，就可以根据组件通信量和消息通信速度的要求，选择出适合的 Redis 消息队列方案。目前使用Redis做消息队列可以有如下三种方式。</p>
+<p><img src="https://blob.hixforever.com/image-20210907174320617.png" alt="image-20210907174320617"></p>
+<h4 id="一、消息队列的消息存取需求"><a href="#一、消息队列的消息存取需求" class="headerlink" title="一、消息队列的消息存取需求"></a>一、消息队列的消息存取需求</h4><p>在分布式系统中，当两个组件要基于消息队列进行通信时，一个组件会把要处理的数据以消息的形式传递给消息队列，然后，这个组件就可以继续执行其他操作了；远端的另一个组件从消息队列中把消息读取出来，再在本地进行处理。</p>
+<p>假设组件 1 需要对采集到的数据进行求和计算，并写入数据库，但是，消息到达的速度很快，组件 1 没有办法及时地既做采集，又做计算，并且写入数据库。所以，我们可以使用基于消息队列的通信，让组件 1 把数据 x 和 y 保存为 JSON 格式的消息，再发到消息队列，这样它就可以继续接收新的数据了。组件 2 则异步地从消息队列中把数据读取出来，在服务器 2 上进行求和计算后，再写入数据库。这个过程如下图所示：</p>
+<p><img src="https://blob.hixforever.com/20210907175533.png" alt=""></p>
+<p>我们一般把消息队列中发送消息的组件称为生产者（例子中的组件 1），把接收消息的组件称为消费者（例子中的组件 2），下图展示了一个通用的消息队列的架构模型：</p>
+<p><img src="https://blob.hixforever.com/20210907175616.png" alt=""></p>
+<p>在使用消息队列时，消费者可以异步读取生产者消息，然后再进行处理。这样一来，即使生产者发送消息的速度远远超过了消费者处理消息的速度，生产者已经发送的消息也可以缓存在消息队列中，避免阻塞生产者，这是消息队列作为分布式组件通信的一大优势。</p>
+<p><strong>不过，消息队列在存取消息时，必须要满足三个需求，分别是消息保序、处理重复的消息和保证消息可靠性。</strong></p>
+<ol>
+<li><p>需求一：消息保序</p>
+<p>虽然消费者是异步处理消息，但是，消费者仍然需要按照生产者发送消息的顺序来处理消息，避免后发送的消息被先处理了。对于要求消息保序的场景来说，一旦出现这种消息被乱序处理的情况，就可能会导致业务逻辑被错误执行，从而给业务方造成损失。</p>
+</li>
+<li><p>需求二：重复消息处理</p>
+<p>消费者从消息队列读取消息时，有时会因为网络堵塞而出现消息重传的情况。此时，消费者可能会收到多条重复的消息。对于重复的消息，消费者如果多次处理的话，就可能造成一个业务逻辑被多次执行，如果业务逻辑正好是要修改数据，那就会出现数据被多次修改的问题了。</p>
+</li>
+<li><p>需求三：消息可靠性保证</p>
+<p>消费者在处理消息的时候，还可能出现因为故障或宕机导致消息没有处理完成的情况。此时，消息队列需要能提供消息可靠性的保证，也就是说，当消费者重启后，可以重新读取消息再次进行处理，否则，就会出现消息漏处理的问题了。</p>
+</li>
+</ol>
+<h4 id="二、基于-List-的消息队列解决方案"><a href="#二、基于-List-的消息队列解决方案" class="headerlink" title="二、基于 List 的消息队列解决方案"></a>二、基于 List 的消息队列解决方案</h4><p>首先，我们先从最简单的场景开始讲起。</p>
+<p>如果你的业务需求足够简单，想把 Redis 当作队列来使用，肯定最先想到的就是使用 List 这个数据类型。</p>
+<p>因为 List 底层的实现就是一个「链表」，在头部和尾部操作元素，时间复杂度都是 O(1)，这意味着它非常符合消息队列的模型。</p>
+<p>如果把 List 当作队列，你可以这么来用。</p>
+<p>生产者使用 LPUSH 发布消息：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:6379&gt; LPUSH queue msg1</span><br><span class="line">(<span class="built_in">integer</span>) 1</span><br><span class="line">127.0.0.1:6379&gt; LPUSH queue msg2</span><br><span class="line">(<span class="built_in">integer</span>) 2</span><br></pre></td></tr></table></figure>
+<p>消费者这一侧，使用 RPOP 拉取消息：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:6379&gt; RPOP queue</span><br><span class="line"><span class="string">"msg1"</span></span><br><span class="line">127.0.0.1:6379&gt; RPOP queue</span><br><span class="line"><span class="string">"msg2"</span></span><br></pre></td></tr></table></figure>
+<p>这个模型非常简单，也很容易理解。</p>
+<p><img src="https://blob.hixforever.com/20210908141846.png" alt=""></p>
+<p>但这里有个小问题，当队列中已经没有消息了，消费者在执行 RPOP 时，会返回 NULL。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:6379&gt; RPOP queue</span><br><span class="line"><span class="comment"># 没消息了</span></span><br><span class="line">(nil)</span><br></pre></td></tr></table></figure>
+<p>而我们在编写消费者逻辑时，一般是一个「死循环」，这个逻辑需要不断地从队列中拉取消息进行处理，伪代码一般会这么写：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> <span class="keyword">true</span>:</span><br><span class="line">    msg = redis.rpop(<span class="string">"queue"</span>)</span><br><span class="line">    <span class="comment">// 没有消息，继续循环</span></span><br><span class="line">    <span class="keyword">if</span> msg == <span class="keyword">null</span>:</span><br><span class="line">        <span class="keyword">continue</span></span><br><span class="line">    <span class="comment">// 处理消息</span></span><br><span class="line">    handle(msg)</span><br></pre></td></tr></table></figure>
+<p>如果此时队列为空，那消费者依旧会频繁拉取消息，这会造成「CPU 空转」，不仅浪费 CPU 资源，还会对 Redis 造成压力。</p>
+<p>怎么解决这个问题呢？</p>
+<p>也很简单，当队列为空时，我们可以「休眠」一会，再去尝试拉取消息。代码可以修改成这样：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> <span class="keyword">true</span>:</span><br><span class="line">    msg = redis.rpop(<span class="string">"queue"</span>)</span><br><span class="line">    <span class="comment">// 没有消息，休眠2s</span></span><br><span class="line">    <span class="keyword">if</span> msg == <span class="keyword">null</span>:</span><br><span class="line">        sleep(<span class="number">2</span>)</span><br><span class="line">        <span class="keyword">continue</span></span><br><span class="line">    <span class="comment">// 处理消息        </span></span><br><span class="line">    handle(msg)</span><br></pre></td></tr></table></figure>
+<p>这就解决了 CPU 空转问题。</p>
+<p>这个问题虽然解决了，但又带来另外一个问题：当消费者在休眠等待时，有新消息来了，那消费者处理新消息就会存在「延迟」。</p>
+<p>假设设置的休眠时间是 2s，那新消息最多存在 2s 的延迟。</p>
+<p>要想缩短这个延迟，只能减小休眠的时间。但休眠时间越小，又有可能引发 CPU 空转问题。</p>
+<p>鱼和熊掌不可兼得。</p>
+<p>那如何做，既能及时处理新消息，还能避免 CPU 空转呢？</p>
+<p>Redis 是否存在这样一种机制：如果队列为空，消费者在拉取消息时就「阻塞等待」，一旦有新消息过来，就通知我的消费者立即处理新消息呢？</p>
+<p>幸运的是，Redis 确实提供了「阻塞式」拉取消息的命令：BRPOP / BLPOP，这里的 B 指的是阻塞（Block）。</p>
+<p><img src="https://blob.hixforever.com/20210908142213.png" alt=""></p>
+<p>现在，你可以这样来拉取消息了：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> <span class="keyword">true</span>:</span><br><span class="line">    <span class="comment">// 没消息阻塞等待，0表示不设置超时时间</span></span><br><span class="line">    msg = redis.brpop(<span class="string">"queue"</span>, <span class="number">0</span>)</span><br><span class="line">    <span class="keyword">if</span> msg == <span class="keyword">null</span>:</span><br><span class="line">        <span class="keyword">continue</span></span><br><span class="line">    <span class="comment">// 处理消息</span></span><br><span class="line">    handle(msg)</span><br></pre></td></tr></table></figure>
+<p>使用 BRPOP 这种阻塞式方式拉取消息时，还支持传入一个「超时时间」，如果设置为 0，则表示不设置超时，直到有新消息才返回，否则会在指定的超时时间后返回 NULL。</p>
+<p>这个方案不错，既兼顾了效率，还避免了 CPU 空转问题，一举两得。</p>
+<blockquote>
+<p>使用 BRPOP 这种阻塞式方式拉取消息时，还支持传入一个「超时时间」，如果设置为 0，则表示不设置超时，直到有新消息才返回，否则会在指定的超时时间后返回 NULL。</p>
+<p>这个方案不错，既兼顾了效率，还避免了 CPU 空转问题，一举两得。</p>
+</blockquote>
+<p>解决了消息处理不及时的问题，你可以再思考一下，这种队列模型，有什么缺点？</p>
+<p>我们一起来分析一下：</p>
+<ol>
+<li><strong>不支持重复消费</strong>：消费者拉取消息后，这条消息就从 List 中删除了，无法被其它消费者再次消费，即不支持多个消费者消费同一批数据</li>
+<li><strong>消息丢失</strong>：消费者拉取到消息后，如果发生异常宕机，那这条消息就丢失了</li>
+</ol>
+<p>第一个问题是功能上的，使用 List 做消息队列，它仅仅支持最简单的，一组生产者对应一组消费者，不能满足多组生产者和消费者的业务场景。</p>
+<p>第二个问题就比较棘手了，因为从 List 中 POP 一条消息出来后，这条消息就会立即从链表中删除了。也就是说，无论消费者是否处理成功，这条消息都没办法再次消费了。</p>
+<p>这也意味着，如果消费者在处理消息时异常宕机，那这条消息就相当于丢失了。</p>
+<p>针对这 2 个问题怎么解决呢？我们一个个来看。</p>
+<h4 id="三、基于-Pub-Sub-的消息队列解决方案"><a href="#三、基于-Pub-Sub-的消息队列解决方案" class="headerlink" title="三、基于 Pub/Sub 的消息队列解决方案"></a>三、基于 Pub/Sub 的消息队列解决方案</h4><p>从名字就能看出来，这个模块是 Redis 专门是针对「发布/订阅」这种队列模型设计的。</p>
+<p>它正好可以解决前面提到的第一个问题：重复消费。</p>
+<p>即多组生产者、消费者的场景，我们来看它是如何做的。</p>
+<p>Redis 提供了 PUBLISH / SUBSCRIBE 命令，来完成发布、订阅的操作。</p>
+<p><img src="https://blob.hixforever.com/20210907200807.png" alt=""></p>
+<p>假设你想开启 2 个消费者，同时消费同一批数据，就可以按照以下方式来实现。</p>
+<p>首先，使用 SUBSCRIBE 命令，启动 2 个消费者，并「订阅」同一个队列。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 2个消费者 都订阅一个队列</span></span><br><span class="line">127.0.0.1:6379&gt; SUBSCRIBE queue</span><br><span class="line">Reading messages... (press Ctrl-C to quit)</span><br><span class="line">1) <span class="string">"subscribe"</span></span><br><span class="line">2) <span class="string">"queue"</span></span><br><span class="line">3) (<span class="built_in">integer</span>) 1</span><br></pre></td></tr></table></figure>
+<p>此时，2 个消费者都会被阻塞住，等待新消息的到来。</p>
+<p>之后，再启动一个生产者，发布一条消息。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:6379&gt; PUBLISH queue msg1</span><br><span class="line">(<span class="built_in">integer</span>) 1</span><br></pre></td></tr></table></figure>
+<p>这时，2 个消费者就会解除阻塞，收到生产者发来的新消息。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:6379&gt; SUBSCRIBE queue</span><br><span class="line"><span class="comment"># 收到新消息</span></span><br><span class="line">1) <span class="string">"message"</span></span><br><span class="line">2) <span class="string">"queue"</span></span><br><span class="line">3) <span class="string">"msg1"</span></span><br></pre></td></tr></table></figure>
+<p>使用 Pub/Sub 这种方案，既支持阻塞式拉取消息，还很好地满足了多组消费者，消费同一批数据的业务需求。</p>
+<p>除此之外，Pub/Sub 还提供了「匹配订阅」模式，允许消费者根据一定规则，订阅「多个」自己感兴趣的队列。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 订阅符合规则的队列</span></span><br><span class="line">127.0.0.1:6379&gt; PSUBSCRIBE queue.*</span><br><span class="line">Reading messages... (press Ctrl-C to quit)</span><br><span class="line">1) <span class="string">"psubscribe"</span></span><br><span class="line">2) <span class="string">"queue.*"</span></span><br><span class="line">3) (<span class="built_in">integer</span>) 1</span><br></pre></td></tr></table></figure>
+<p>这里的消费者，订阅了 queue.* 相关的队列消息。</p>
+<p>之后，生产者分别向 queue.p1 和 queue.p2 发布消息。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:6379&gt; PUBLISH queue.p1 msg1</span><br><span class="line">(<span class="built_in">integer</span>) 1</span><br><span class="line">127.0.0.1:6379&gt; PUBLISH queue.p2 msg2</span><br><span class="line">(<span class="built_in">integer</span>) 1</span><br></pre></td></tr></table></figure>
+<p>这时再看消费者，它就可以接收到这 2 个生产者的消息了。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:6379&gt; PSUBSCRIBE queue.*</span><br><span class="line">Reading messages... (press Ctrl-C to quit)</span><br><span class="line">...</span><br><span class="line"><span class="comment"># 来自queue.p1的消息</span></span><br><span class="line">1) <span class="string">"pmessage"</span></span><br><span class="line">2) <span class="string">"queue.*"</span></span><br><span class="line">3) <span class="string">"queue.p1"</span></span><br><span class="line">4) <span class="string">"msg1"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 来自queue.p2的消息</span></span><br><span class="line">1) <span class="string">"pmessage"</span></span><br><span class="line">2) <span class="string">"queue.*"</span></span><br><span class="line">3) <span class="string">"queue.p2"</span></span><br><span class="line">4) <span class="string">"msg2"</span></span><br></pre></td></tr></table></figure>
+<p><img src="https://blob.hixforever.com/20210908133341.png" alt=""></p>
+<p>我们可以看到，Pub/Sub 最大的优势就是，支持多组生产者、消费者处理消息。</p>
+<p>讲完了它的优点，那它有什么缺点呢？</p>
+<p>其实，Pub/Sub 最大问题是：<strong>丢数据</strong>。</p>
+<p>如果发生以下场景，就有可能导致数据丢失：</p>
+<ol>
+<li>消费者下线</li>
+<li>Redis 宕机</li>
+<li>消息堆积</li>
+</ol>
+<p>究竟是怎么回事？</p>
+<p>这其实与 Pub/Sub 的实现方式有很大关系。</p>
+<p>Pub/Sub 在实现时非常简单，它没有基于任何数据类型，也没有做任何的数据存储，它只是单纯地为生产者、消费者建立「数据转发通道」，把符合规则的数据，从一端转发到另一端。</p>
+<p>一个完整的发布、订阅消息处理流程是这样的：</p>
+<ol>
+<li>消费者订阅指定队列，Redis 就会记录一个映射关系：队列-&gt;消费者</li>
+<li>生产者向这个队列发布消息，那 Redis 就从映射关系中找出对应的消费者，把消息转发给它</li>
+</ol>
+<p><img src="https://blob.hixforever.com/20210908133442.png" alt=""></p>
+<p>整个过程中，没有任何的数据存储，一切都是实时转发的。</p>
+<p>这种设计方案，就导致了上面提到的那些问题。</p>
+<p>例如，如果一个消费者异常挂掉了，它再重新上线后，只能接收新的消息，在下线期间生产者发布的消息，因为找不到消费者，都会被丢弃掉。</p>
+<p>如果所有消费者都下线了，那生产者发布的消息，因为找不到任何一个消费者，也会全部「丢弃」。</p>
+<p>所以，当你在使用 Pub/Sub 时，一定要注意：<strong>消费者必须先订阅队列，生产者才能发布消息，否则消息会丢失。</strong></p>
+<p>这也是前面讲例子时，我们让消费者先订阅队列，之后才让生产者发布消息的原因。</p>
+<p>另外，因为 Pub/Sub 没有基于任何数据类型实现，所以它也不具备「数据持久化」的能力。</p>
+<p>也就是说，Pub/Sub 的相关操作，不会写入到 RDB 和 AOF 中，当 Redis 宕机重启，Pub/Sub 的数据也会全部丢失。</p>
+<p>最后，我们来看 Pub/Sub 在处理「消息积压」时，为什么也会丢数据？</p>
+<p>当消费者的速度，跟不上生产者时，就会导致数据积压的情况发生。</p>
+<p>如果采用 List 当作队列，消息积压时，会导致这个链表很长，最直接的影响就是，Redis 内存会持续增长，直到消费者把所有数据都从链表中取出。</p>
+<p>但 Pub/Sub 的处理方式却不一样，当消息积压时，有可能会导致<strong>消费失败和消息丢失</strong>！</p>
+<p>这是怎么回事？</p>
+<p>还是回到 Pub/Sub 的实现细节上来说。</p>
+<p>每个消费者订阅一个队列时，Redis 都会在 Server 上给这个消费者在分配一个「缓冲区」，这个缓冲区其实就是一块内存。</p>
+<p>当生产者发布消息时，Redis 先把消息写到对应消费者的缓冲区中。</p>
+<p>之后，消费者不断地从缓冲区读取消息，处理消息。看到了么，整个过程中，没有任何的数据存储，一切都是实时转发的。</p>
+<p>这种设计方案，就导致了上面提到的那些问题。</p>
+<p>例如，如果一个消费者异常挂掉了，它再重新上线后，只能接收新的消息，在下线期间生产者发布的消息，因为找不到消费者，都会被丢弃掉。</p>
+<p>如果所有消费者都下线了，那生产者发布的消息，因为找不到任何一个消费者，也会全部「丢弃」。</p>
+<p>所以，当你在使用 Pub/Sub 时，一定要注意：<strong>消费者必须先订阅队列，生产者才能发布消息，否则消息会丢失。</strong></p>
+<p>这也是前面讲例子时，我们让消费者先订阅队列，之后才让生产者发布消息的原因。</p>
+<p>另外，因为 Pub/Sub 没有基于任何数据类型实现，所以它也不具备「数据持久化」的能力。</p>
+<p>也就是说，Pub/Sub 的相关操作，不会写入到 RDB 和 AOF 中，当 Redis 宕机重启，Pub/Sub 的数据也会全部丢失。</p>
+<p>最后，我们来看 Pub/Sub 在处理「消息积压」时，为什么也会丢数据？</p>
+<p>当消费者的速度，跟不上生产者时，就会导致数据积压的情况发生。</p>
+<p>如果采用 List 当作队列，消息积压时，会导致这个链表很长，最直接的影响就是，Redis 内存会持续增长，直到消费者把所有数据都从链表中取出。</p>
+<p>但 Pub/Sub 的处理方式却不一样，当消息积压时，有可能会导致<strong>消费失败和消息丢失</strong>！</p>
+<p>这是怎么回事？</p>
+<p>还是回到 Pub/Sub 的实现细节上来说。</p>
+<p>每个消费者订阅一个队列时，Redis 都会在 Server 上给这个消费者在分配一个「缓冲区」，这个缓冲区其实就是一块内存。</p>
+<p>当生产者发布消息时，Redis 先把消息写到对应消费者的缓冲区中。</p>
+<p>之后，消费者不断地从缓冲区读取消息，处理消息。看到了么，整个过程中，没有任何的数据存储，一切都是实时转发的。</p>
+<p>这种设计方案，就导致了上面提到的那些问题。</p>
+<p>例如，如果一个消费者异常挂掉了，它再重新上线后，只能接收新的消息，在下线期间生产者发布的消息，因为找不到消费者，都会被丢弃掉。</p>
+<p>如果所有消费者都下线了，那生产者发布的消息，因为找不到任何一个消费者，也会全部「丢弃」。</p>
+<p>所以，当你在使用 Pub/Sub 时，一定要注意：<strong>消费者必须先订阅队列，生产者才能发布消息，否则消息会丢失。</strong></p>
+<p>这也是前面讲例子时，我们让消费者先订阅队列，之后才让生产者发布消息的原因。</p>
+<p>另外，因为 Pub/Sub 没有基于任何数据类型实现，所以它也不具备「数据持久化」的能力。</p>
+<p>也就是说，Pub/Sub 的相关操作，不会写入到 RDB 和 AOF 中，当 Redis 宕机重启，Pub/Sub 的数据也会全部丢失。</p>
+<p>最后，我们来看 Pub/Sub 在处理「消息积压」时，为什么也会丢数据？</p>
+<p>当消费者的速度，跟不上生产者时，就会导致数据积压的情况发生。</p>
+<p>如果采用 List 当作队列，消息积压时，会导致这个链表很长，最直接的影响就是，Redis 内存会持续增长，直到消费者把所有数据都从链表中取出。</p>
+<p>但 Pub/Sub 的处理方式却不一样，当消息积压时，有可能会导致<strong>消费失败和消息丢失</strong>！</p>
+<p>这是怎么回事？</p>
+<p>还是回到 Pub/Sub 的实现细节上来说。</p>
+<p>每个消费者订阅一个队列时，Redis 都会在 Server 上给这个消费者在分配一个「缓冲区」，这个缓冲区其实就是一块内存。</p>
+<p>当生产者发布消息时，Redis 先把消息写到对应消费者的缓冲区中。</p>
+<p>之后，消费者不断地从缓冲区读取消息，处理消息。</p>
+<p><img src="https://blob.hixforever.com/20210908133547.png" alt=""></p>
+<p>但是，问题就出在这个缓冲区上。</p>
+<p>因为这个缓冲区其实是有「上限」的（可配置），如果消费者拉取消息很慢，就会造成生产者发布到缓冲区的消息开始积压，缓冲区内存持续增长。</p>
+<p>如果超过了缓冲区配置的上限，此时，Redis 就会「强制」把这个消费者踢下线。</p>
+<p>这时消费者就会消费失败，也会丢失数据。</p>
+<p>如果你有看过 Redis 的配置文件，可以看到这个缓冲区的默认配置：client-output-buffer-limit pubsub 32mb 8mb 60。</p>
+<p>它的参数含义如下：</p>
+<ul>
+<li>32mb：缓冲区一旦超过 32MB，Redis 直接强制把消费者踢下线</li>
+<li>8mb + 60：缓冲区超过 8MB，并且持续 60 秒，Redis 也会把消费者踢下线</li>
+</ul>
+<p>Pub/Sub 的这一点特点，是与 List 作队列差异比较大的。</p>
+<p>从这里你应该可以看出，<strong>List 其实是属于「拉」模型，而 Pub/Sub 其实属于「推」模型</strong>。</p>
+<p>List 中的数据可以一直积压在内存中，消费者什么时候来「拉」都可以。</p>
+<p>但 Pub/Sub 是把消息先「推」到消费者在 Redis Server 上的缓冲区中，然后等消费者再来取。</p>
+<p>当生产、消费速度不匹配时，就会导致缓冲区的内存开始膨胀，Redis 为了控制缓冲区的上限，所以就有了上面讲到的，强制把消费者踢下线的机制。</p>
+<p>好了，现在我们总结一下 Pub/Sub 的优缺点：</p>
+<ol>
+<li>支持发布 / 订阅，支持多组生产者、消费者处理消息</li>
+<li>消费者下线，数据会丢失</li>
+<li>不支持数据持久化，Redis 宕机，数据也会丢失</li>
+<li>消息堆积，缓冲区溢出，消费者会被强制踢下线，数据也会丢失</li>
+</ol>
+<p>有没有发现，除了第一个是优点之外，剩下的都是缺点。</p>
+<p>所以，很多人看到 Pub/Sub 的特点后，觉得这个功能很「鸡肋」。</p>
+<p>也正是以上原因，Pub/Sub 在实际的应用场景中用得并不多。</p>
+<blockquote>
+<p>目前只有哨兵集群和 Redis 实例通信时，采用了 Pub/Sub 的方案，因为哨兵正好符合即时通讯的业务场景。</p>
+</blockquote>
+<p>我们再来看一下，Pub/Sub 有没有解决，消息处理时异常宕机，无法再次消费的问题呢？</p>
+<p>其实也不行，Pub/Sub 从缓冲区取走数据之后，数据就从 Redis 缓冲区删除了，消费者发生异常，自然也无法再次重新消费。</p>
+<p>好，现在我们重新梳理一下，我们在使用消息队列时的需求。</p>
+<p>当我们在使用一个消息队列时，希望它的功能如下：</p>
+<ul>
+<li>支持阻塞等待拉取消息</li>
+<li>支持发布 / 订阅模式</li>
+<li>消费失败，可重新消费，消息不丢失</li>
+<li>实例宕机，消息不丢失，数据可持久化</li>
+<li>消息可堆积</li>
+</ul>
+<p>Redis 除了 List 和 Pub/Sub 之外，还有符合这些要求的数据类型吗？</p>
+<p>其实，Redis 的作者也看到了以上这些问题，也一直在朝着这些方向努力着。</p>
+<p>Redis 作者在开发 Redis 期间，还另外开发了一个开源项目 disque。</p>
+<p>这个项目的定位，就是一个基于内存的分布式消息队列中间件。</p>
+<p>但由于种种原因，这个项目一直不温不火。</p>
+<p>终于，在 Redis 5.0 版本，作者把 disque 功能移植到了 Redis 中，并给它定义了一个新的数据类型：<strong>Streams</strong>。</p>
+<p>下面我们就来看看，它能符合上面提到的这些要求吗？</p>
+<h4 id="四、基于-Streams-的消息队列解决方案"><a href="#四、基于-Streams-的消息队列解决方案" class="headerlink" title="四、基于 Streams 的消息队列解决方案"></a>四、基于 Streams 的消息队列解决方案</h4><p>Streams 是 Redis 专门为消息队列设计的数据类型，我们来看 Stream 是如何解决上面这些问题的。</p>
+<p>我们依旧从简单到复杂，依次来看 Stream 在做消息队列时，是如何处理的？</p>
+<h5 id="1-Streams-是如何实现消息队列需求的"><a href="#1-Streams-是如何实现消息队列需求的" class="headerlink" title="1. Streams 是如何实现消息队列需求的"></a>1. Streams 是如何实现消息队列需求的</h5><p>首先，Stream 通过 XADD 和 XREAD 完成最简单的生产、消费模型：</p>
+<p><img src="https://blob.hixforever.com/20210908134259.png" alt=""></p>
+<p>下面我们来看，针对前面提到的消息队列要求，Stream 都是如何解决的？</p>
+<ol>
+<li><strong>Streams 通过 XADD 和 XREAD 完成最简单的生产、消费模型。</strong></li>
+<li><strong>Streams 通过BLOCK 参数支持「阻塞式」拉取消息</strong></li>
+<li><strong>Stream 通过XGROUP和XREADGROUP支持发布 / 订阅模式</strong></li>
+<li><strong>Stream 通过XACK标记消息为「处理完成」</strong></li>
+<li><strong>Stream 数据会写入到 RDB 和 AOF 做持久化</strong></li>
+<li><strong>Stream 处理消息堆积方式，采用丢弃消息的方式</strong><ul>
+<li>在发布消息时，可以指定队列的最大长度，防止队列积压导致内存爆炸。当队列长度超过上限后，旧消息会被删除，只保留固定长度的新消息。<code>XADD mystream MAXLEN 10000 * repo 1</code></li>
+</ul>
+</li>
+<li></li>
+</ol>
+<h5 id="2-Streams与专业的消息队列对比"><a href="#2-Streams与专业的消息队列对比" class="headerlink" title="2. Streams与专业的消息队列对比"></a>2. Streams与专业的消息队列对比</h5><p>其实，一个专业的消息队列，必须要做到两大块：</p>
+<ol>
+<li>消息不丢</li>
+<li>消息可堆积</li>
+</ol>
+<p>前面我们讨论的重点，很大篇幅围绕的是第一点展开的。</p>
+<p>这里我们换个角度，从一个消息队列的「使用模型」来分析一下，怎么做，才能保证数据不丢？</p>
+<p>使用一个消息队列，其实就分为三大块：<strong>生产者、队列中间件、消费者</strong>。</p>
+<p><img src="https://blob.hixforever.com/20210908140607.png" alt=""></p>
+<p>消息是否会发生丢失，其重点也就在于以下 3 个环节：</p>
+<ol>
+<li>生产者会不会丢消息？</li>
+<li>消费者会不会丢消息？</li>
+<li>队列中间件会不会丢消息？</li>
+</ol>
+<p><strong>1) 生产者会不会丢消息？</strong></p>
+<p>当生产者在发布消息时，可能发生以下异常情况：</p>
+<ol>
+<li>消息没发出去：网络故障或其它问题导致发布失败，中间件直接返回失败</li>
+<li>不确定是否发布成功：网络问题导致发布超时，可能数据已发送成功，但读取响应结果超时了</li>
+</ol>
+<p>如果是情况 1，消息根本没发出去，那么重新发一次就好了。</p>
+<p>如果是情况 2，生产者没办法知道消息到底有没有发成功？所以，为了避免消息丢失，它也只能继续重试，直到发布成功为止。</p>
+<blockquote>
+<p>生产者一般会设定一个最大重试次数，超过上限依旧失败，需要记录日志报警处理。</p>
+</blockquote>
+<p>也就是说，生产者为了避免消息丢失，只能采用失败重试的方式来处理。</p>
+<p>但发现没有？这也意味着消息可能会重复发送。</p>
+<p>是的，在使用消息队列时，要保证消息不丢，宁可重发，也不能丢弃。</p>
+<p>那消费者这边，就需要多做一些逻辑了。</p>
+<p>对于敏感业务，当消费者收到重复数据数据时，要设计幂等逻辑，保证业务的正确性。</p>
+<p>从这个角度来看，生产者会不会丢消息，取决于生产者对于异常情况的处理是否合理。</p>
+<p>所以，无论是 Redis 还是专业的队列中间件，生产者在这一点上都是可以保证消息不丢的。</p>
+<p><strong>2) 消费者会不会丢消息？</strong></p>
+<p>这种情况就是我们前面提到的，消费者拿到消息后，还没处理完成，就异常宕机了，那消费者还能否重新消费失败的消息？</p>
+<p>要解决这个问题，消费者在处理完消息后，必须「告知」队列中间件，队列中间件才会把标记已处理，否则仍旧把这些数据发给消费者。</p>
+<p>这种方案需要消费者和中间件互相配合，才能保证消费者这一侧的消息不丢。</p>
+<p>无论是 Redis 的 Stream，还是专业的队列中间件，例如 RabbitMQ、Kafka，其实都是这么做的。</p>
+<p>所以，从这个角度来看，Redis 也是合格的。</p>
+<p><strong>3) 队列中间件会不会丢消息？</strong></p>
+<p>前面 2 个问题都比较好处理，只要客户端和服务端配合好，就能保证生产端、消费端都不丢消息。</p>
+<p>但是，如果队列中间件本身就不可靠呢？</p>
+<p>毕竟生产者和消费这都依赖它，如果它不可靠，那么生产者和消费者无论怎么做，都无法保证数据不丢。</p>
+<p>在这个方面，Redis 其实没有达到要求。</p>
+<p>Redis 在以下 2 个场景下，都会导致数据丢失。</p>
+<ol>
+<li>AOF 持久化配置为每秒写盘，但这个写盘过程是异步的，Redis 宕机时会存在数据丢失的可能</li>
+<li>主从复制也是异步的，主从切换时，也存在丢失数据的可能（从库还未同步完成主库发来的数据，就被提成主库）</li>
+</ol>
+<p>基于以上原因我们可以看到，<strong>Redis 本身的无法保证严格的数据完整性</strong>。</p>
+<p>所以，如果把 Redis 当做消息队列，在这方面是有可能导致数据丢失的。</p>
+<p>再来看那些专业的消息队列中间件是如何解决这个问题的？</p>
+<p>像 RabbitMQ 或 Kafka 这类专业的队列中间件，在使用时，一般是部署一个集群，生产者在发布消息时，队列中间件通常会写「多个节点」，以此保证消息的完整性。这样一来，即便其中一个节点挂了，也能保证集群的数据不丢失。</p>
+<p>也正因为如此，RabbitMQ、Kafka在设计时也更复杂。毕竟，它们是专门针对队列场景设计的。</p>
+<p>但 Redis 的定位则不同，它的定位更多是当作缓存来用，它们两者在这个方面肯定是存在差异的。</p>
+<p>最后，我们来看消息积压怎么办？</p>
+<p><strong>4) 消息积压怎么办？</strong></p>
+<p>因为 Redis 的数据都存储在内存中，这就意味着一旦发生消息积压，则会导致 Redis 的内存持续增长，如果超过机器内存上限，就会面临被 OOM 的风险。</p>
+<p>所以，Redis 的 Stream 提供了可以指定队列最大长度的功能，就是为了避免这种情况发生。</p>
+<p>但 Kafka、RabbitMQ 这类消息队列就不一样了，它们的数据都会存储在磁盘上，磁盘的成本要比内存小得多，当消息积压时，无非就是多占用一些磁盘空间，相比于内存，在面对积压时也会更加「坦然」。</p>
+<p>综上，我们可以看到，把 Redis 当作队列来使用时，始终面临的 2 个问题：</p>
+<ol>
+<li>Redis 本身可能会丢数据</li>
+<li>面对消息积压，Redis 内存资源紧张</li>
+</ol>
+<p>到这里，Redis 是否可以用作队列，我想这个答案你应该会比较清晰了。</p>
+<p>如果你的业务场景足够简单，对于数据丢失不敏感，而且消息积压概率比较小的情况下，把 Redis 当作队列是完全可以的。</p>
+<p>而且，Redis 相比于 Kafka、RabbitMQ，部署和运维也更加轻量。</p>
+<p>如果你的业务场景对于数据丢失非常敏感，而且写入量非常大，消息积压时会占用很多的机器资源，那么我建议你使用专业的消息队列中间件。</p>
+<h5 id="3-Streams操作命令简介"><a href="#3-Streams操作命令简介" class="headerlink" title="3. Streams操作命令简介"></a>3. Streams操作命令简介</h5><p>Streams提供了丰富的消息队列操作命令。</p>
+<ul>
+<li>XADD：插入消息，保证有序，可以自动生成全局唯一 ID。</li>
+<li>XREAD：用于读取消息，可以按 ID 读取数据。</li>
+<li>XGROUP CREATE：创建消费组。</li>
+<li>XREADGROUP：按消费组形式读取消息。</li>
+<li>XPENDING 和 XACK：XPENDING 命令可以用来查询每个消费组内所有消费者已读取但尚未确认的消息，而 XACK 命令用于向消息队列确认消息处理已完成。</li>
+</ul>
+<h6 id="1-XADD"><a href="#1-XADD" class="headerlink" title="1. XADD"></a>1. XADD</h6><p>语法格式：</p>
+<blockquote>
+<p><code>XADD key ID field value [field value ...]</code></p>
+<ul>
+<li>key：队列名称，如果不存在就创建</li>
+<li>ID：消息 id，我们使用 * 表示由 redis 生成，可以自定义，但是要自己保证递增性。</li>
+<li>field value [field value …]，key-value类型数据</li>
+</ul>
+</blockquote>
+<p>XADD 命令可以往消息队列中插入新消息，消息的格式是键 - 值对形式。对于插入的每一条消息，Streams 可以自动为其生成一个全局唯一的 ID。我们执行下面的命令，就可以往名称为 mqstream 的消息队列中插入一条消息。</p>
+<p>下面命令组成如下：</p>
+<ul>
+<li>消息的键是 repo</li>
+<li>值是 5。</li>
+<li>消息队列名称后面的*，表示让 Redis 为插入的数据自动生成一个全局唯一的 ID。可以看到，消息的全局唯一 ID 由两部分组成<code>1631010568190-0</code>。<ul>
+<li>1631010568190：数据插入时，以毫秒为单位计算的当前服务器时间</li>
+<li>0：表示插入消息在当前毫秒内的消息序号，这是从 0 开始编号的。</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># *表示让Redis自动生成消息ID</span></span><br><span class="line"><span class="comment"># XADD key ID field value [field value ...]</span></span><br><span class="line">127.0.0.1:6379&gt; XADD mqstream * repo 5</span><br><span class="line"><span class="string">"1631010546467-0"</span></span><br><span class="line">127.0.0.1:6379&gt; XADD mqstream * repo 6</span><br><span class="line"><span class="string">"1631010568190-0"</span></span><br></pre></td></tr></table></figure>
+<h6 id="2-XREAD"><a href="#2-XREAD" class="headerlink" title="2. XREAD"></a>2. XREAD</h6><p>语法格式：</p>
+<blockquote>
+<p><code>XREAD [COUNT count] [BLOCK milliseconds] STREAMS key [key ...] id [id ...]</code></p>
+<ul>
+<li>[COUNT count]：用来获取消息的数量</li>
+<li>[BLOCK milliseconds]：用来设置阻塞模式和阻塞超时时间，默认为非阻塞</li>
+<li>id [id …]：用来设置读取的起始 ID，相当于 where id &gt; $id，阻塞模式中可以使用 $ 来获取最新的消息 ID，非阻塞模式下无意义。</li>
+<li>key：队列名</li>
+</ul>
+</blockquote>
+<p>当消费者需要读取消息时，可以直接使用 XREAD 命令从消息队列中读取。</p>
+<p>XREAD 在读取消息时，可以指定一个消息 ID，并从这个消息 ID 的下一条消息开始进行读取。</p>
+<p>例如，我们可以执行下面的命令，从 ID 号为 1631010542237-0 的消息开始，读取后续的所有消息（示例中一共 3 条）。参数说明如下：</p>
+<ul>
+<li>block：当消息队列中没有消息时，一旦设置了 BLOCK 配置项，XREAD 就会阻塞，阻塞的时长可以在 BLOCK 配置项进行设置。<strong>BLOCK 0 表示阻塞等待，不设置超时时间</strong>。</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:6379&gt; XREAD BLOCK 0 STREAMS mqstream 1631010542237-0</span><br><span class="line">1) 1) <span class="string">"mqstream"</span></span><br><span class="line">   2) 1) 1) <span class="string">"1631010544817-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"4"</span></span><br><span class="line">      2) 1) <span class="string">"1631010546467-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"5"</span></span><br><span class="line">      3) 1) <span class="string">"1631010568190-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"6"</span></span><br></pre></td></tr></table></figure>
+<p>看下面命令，其中，命令最后的“$”符号表示读取最新的消息，同时，我们设置了 block 10000 的配置项，10000 的单位是毫秒，表明 XREAD 在读取最新消息时，如果没有消息到来，XREAD 将阻塞 10000 毫秒（即 10 秒），然后再返回。下面命令中的 XREAD 执行后，消息队列 mqstream 中一直没有消息，所以，XREAD 在 10 秒后返回空值（nil）。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:6379&gt; XREAD BLOCK 10000 STREAMS mqstream $</span><br><span class="line">(nil)</span><br><span class="line">(10.00s)</span><br></pre></td></tr></table></figure>
+<h6 id="3-XGROUP-CREATE"><a href="#3-XGROUP-CREATE" class="headerlink" title="3. XGROUP CREATE"></a>3. XGROUP CREATE</h6><p>语法格式：</p>
+<blockquote>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; XGROUP [CREATE key groupname id-or-$] [SETID key groupname id-or-$] [DESTROY key groupname] [CREATECONSUMER key groupname consumername] [DELCONSUMER key groupname consumername]</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<blockquote>
+<ul>
+<li><code>[CREATE key groupname id-or-$]</code>：在指定的 key 中创建分组，并且指定分组读取消息的起点，如果指定了0，分组将可以读取指定 key 的所有历史消息，如果指定了 $，分组将可以读取指定 key 的新消息，将不能读取历史消息。也可以指定任意的开始 ID。</li>
+<li><code>[SETID key groupname id-or-$]</code>：重新给已存在的分组设置消息读取的起点。例如将起点设置为 0就可以重新读取所有的历史消息</li>
+<li><code>[DESTROY key groupname]</code>：销毁指定 key 中的一个分组</li>
+<li><code>[CREATECONSUMER key groupname consumername]</code>：在指定的 key 和指定的分组中创建一个消费者。当某个命令提及了新的消费者名称时，也会自动创建新的消费者。</li>
+<li><code>[DELCONSUMER key groupname consumername]</code>：在指定的 key 和指定的分组中销毁一个消费者。</li>
+<li><code>$</code>：表示从尾部开始消费，只接受新消息，当前 Stream 消息会全部忽略。</li>
+</ul>
+</blockquote>
+<p>执行下面的命令，</p>
+<ol>
+<li><code>XGROUP create mqstream group1 0</code>：创建一个名为 group1 的消费组，这个消费组消费的消息队列是 mqstream。</li>
+<li><code>XREADGROUP group group1 consumer1 streams mqstream &gt;</code>：让 group1 消费组里的消费者 consumer1 从 mqstream 中读取所有消息，其中，<strong>命令最后的参数“&gt;”，表示从第一条尚未被消费的消息开始读取</strong>。因为在 consumer1 读取消息前，group1 中没有其他消费者读取过消息，所以，consumer1 就得到 mqstream 消息队列中的所有消息了（一共 6 条）。</li>
+<li><code>XREADGROUP group group1 consumer1 streams mqstream &gt;</code>：再次执行上述2命令查看返回效果</li>
+<li><code>XREADGROUP group group1 consumer2 streams mqstream 0</code>：需要注意的是，消息队列中的消息一旦被消费组里的一个消费者读取了，就不能再被该消费组内的其他消费者读取了。比如说，我们执行完刚才的 XREADGROUP 命令后，再执行下面的命令，让 group1 内的 consumer2 读取消息时，consumer2 读到的就是空值，因为消息已经被 consumer1 读取完了.</li>
+<li><code>XREADGROUP group group2 consumer1 count 1 streams mqstream &gt;</code>：使用消费组的目的是让组内的多个消费者共同分担读取消息，所以，我们通常会让每个消费者读取部分消息，从而实现消息读取负载在多个消费者间是均衡分布的。例如，我们执行下列命令，让 group2 中的 consumer1、2、3 各自读取一条消息。</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1</span></span><br><span class="line">127.0.0.1:6379&gt; XGROUP create mqstream group1 0</span><br><span class="line">OK</span><br><span class="line"><span class="comment"># 2</span></span><br><span class="line">127.0.0.1:6379&gt; XREADGROUP group group1 consumer1 streams mqstream &gt;</span><br><span class="line">1) 1) <span class="string">"mqstream"</span></span><br><span class="line">   2) 1) 1) <span class="string">"1631010537963-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"1"</span></span><br><span class="line">      2) 1) <span class="string">"1631010540381-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"2"</span></span><br><span class="line">      3) 1) <span class="string">"1631010542237-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"3"</span></span><br><span class="line">      4) 1) <span class="string">"1631010544817-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"4"</span></span><br><span class="line">      5) 1) <span class="string">"1631010546467-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"5"</span></span><br><span class="line">      6) 1) <span class="string">"1631010568190-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"6"</span></span><br><span class="line"><span class="comment"># 3            </span></span><br><span class="line">127.0.0.1:6379&gt; XREADGROUP group group1 consumer1 streams mqstream &gt;</span><br><span class="line">(nil)</span><br><span class="line"><span class="comment"># 4</span></span><br><span class="line">127.0.0.1:6379&gt; XREADGROUP group group1 consumer2 streams mqstream 0</span><br><span class="line">1) 1) <span class="string">"mqstream"</span></span><br><span class="line">   2) (empty array)    </span><br><span class="line"><span class="comment"># 5</span></span><br><span class="line">127.0.0.1:6379&gt; XGROUP create mqstream group2 0</span><br><span class="line">OK</span><br><span class="line">127.0.0.1:6379&gt; XREADGROUP group group2 consumer1 count 1 streams mqstream &gt;</span><br><span class="line">1) 1) <span class="string">"mqstream"</span></span><br><span class="line">   2) 1) 1) <span class="string">"1631010537963-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"1"</span></span><br><span class="line">127.0.0.1:6379&gt; XREADGROUP group group2 consumer2 count 1 streams mqstream &gt;</span><br><span class="line">1) 1) <span class="string">"mqstream"</span></span><br><span class="line">   2) 1) 1) <span class="string">"1631010540381-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"2"</span></span><br><span class="line">127.0.0.1:6379&gt; XREADGROUP group group2 consumer3 count 1 streams mqstream &gt;</span><br><span class="line">1) 1) <span class="string">"mqstream"</span></span><br><span class="line">   2) 1) 1) <span class="string">"1631010542237-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"3"</span></span><br></pre></td></tr></table></figure>
+<h6 id="4-XREADGROUP-GROUP"><a href="#4-XREADGROUP-GROUP" class="headerlink" title="4. XREADGROUP GROUP"></a>4. XREADGROUP GROUP</h6><p>使用 XREADGROUP GROUP 读取消费组中的消息</p>
+<p>语法格式：</p>
+<blockquote>
+<p><code>XREADGROUP GROUP group consumer [COUNT count] [BLOCK milliseconds] [NOACK] STREAMS key [key ...] ID [ID ...]</code></p>
+<ul>
+<li>GROUP：固定</li>
+<li>group：消费组名</li>
+<li>consumer：消费者名</li>
+<li>[COUNT count]：每次获取消息的数量</li>
+<li>[BLOCK milliseconds]：阻塞模式和超时时间</li>
+<li>[NOACK]：不需要确认消息，适用于不怎么重要的可以丢失的消息</li>
+<li>STREAMS：固定</li>
+<li>key [key …]：指定的队列名</li>
+<li>ID [ID …]：指定的消息 ID，&gt; 指定读取所有未消费的消息，其他值指定被挂起的消息</li>
+</ul>
+</blockquote>
+<p>执行如下命令：</p>
+<ol>
+<li><code>XREADGROUP group group1 consumer1 streams mqstream &gt;</code>：让 group1 消费组里的消费者 consumer1 从 mqstream 中读取所有消息，其中，<strong>命令最后的参数“&gt;”，表示从第一条尚未被消费的消息开始读取</strong>。因为在 consumer1 读取消息前，group1 中没有其他消费者读取过消息，所以，consumer1 就得到 mqstream 消息队列中的所有消息了（一共 6 条）。</li>
+<li><code>XREADGROUP group group1 consumer1 streams mqstream &gt;</code>：再次执行上述2命令查看返回效果</li>
+<li><code>XREADGROUP group group1 consumer2 streams mqstream 0</code>：需要注意的是，消息队列中的消息一旦被消费组里的一个消费者读取了，就不能再被该消费组内的其他消费者读取了。比如说，我们执行完刚才的 XREADGROUP 命令后，再执行下面的命令，让 group1 内的 consumer2 读取消息时，consumer2 读到的就是空值，因为消息已经被 consumer1 读取完了.</li>
+<li><code>XREADGROUP group group2 consumer1 count 1 streams mqstream &gt;</code>：使用消费组的目的是让组内的多个消费者共同分担读取消息，所以，我们通常会让每个消费者读取部分消息，从而实现消息读取负载在多个消费者间是均衡分布的。例如，我们执行下列命令，让 group2 中的 consumer1、2、3 各自读取一条消息。</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1</span></span><br><span class="line">127.0.0.1:6379&gt; XREADGROUP group group1 consumer1 streams mqstream &gt;</span><br><span class="line">1) 1) <span class="string">"mqstream"</span></span><br><span class="line">   2) 1) 1) <span class="string">"1631010537963-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"1"</span></span><br><span class="line">      2) 1) <span class="string">"1631010540381-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"2"</span></span><br><span class="line">      3) 1) <span class="string">"1631010542237-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"3"</span></span><br><span class="line">      4) 1) <span class="string">"1631010544817-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"4"</span></span><br><span class="line">      5) 1) <span class="string">"1631010546467-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"5"</span></span><br><span class="line">      6) 1) <span class="string">"1631010568190-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"6"</span></span><br><span class="line"><span class="comment"># 2            </span></span><br><span class="line">127.0.0.1:6379&gt; XREADGROUP group group1 consumer1 streams mqstream &gt;</span><br><span class="line">(nil)</span><br><span class="line"><span class="comment"># 3</span></span><br><span class="line">127.0.0.1:6379&gt; XREADGROUP group group1 consumer2 streams mqstream 0</span><br><span class="line">1) 1) <span class="string">"mqstream"</span></span><br><span class="line">   2) (empty array)    </span><br><span class="line"><span class="comment"># 4</span></span><br><span class="line">127.0.0.1:6379&gt; XGROUP create mqstream group2 0</span><br><span class="line">OK</span><br><span class="line">127.0.0.1:6379&gt; XREADGROUP group group2 consumer1 count 1 streams mqstream &gt;</span><br><span class="line">1) 1) <span class="string">"mqstream"</span></span><br><span class="line">   2) 1) 1) <span class="string">"1631010537963-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"1"</span></span><br><span class="line">127.0.0.1:6379&gt; XREADGROUP group group2 consumer2 count 1 streams mqstream &gt;</span><br><span class="line">1) 1) <span class="string">"mqstream"</span></span><br><span class="line">   2) 1) 1) <span class="string">"1631010540381-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"2"</span></span><br><span class="line">127.0.0.1:6379&gt; XREADGROUP group group2 consumer3 count 1 streams mqstream &gt;</span><br><span class="line">1) 1) <span class="string">"mqstream"</span></span><br><span class="line">   2) 1) 1) <span class="string">"1631010542237-0"</span></span><br><span class="line">         2) 1) <span class="string">"repo"</span></span><br><span class="line">            2) <span class="string">"3"</span></span><br></pre></td></tr></table></figure>
+<h6 id="5-XPENDING和XACK"><a href="#5-XPENDING和XACK" class="headerlink" title="5. XPENDING和XACK"></a>5. XPENDING和XACK</h6><p>语法格式：</p>
+<blockquote>
+<p><code>XPENDING key group [start end count] [consumer]</code></p>
+<ul>
+<li>key，指定的 key</li>
+<li>group，指定的分组</li>
+<li>[start end count]，起始 ID 和结束 ID 还有数量</li>
+<li>consumer，消费者名字</li>
+</ul>
+</blockquote>
+<p>为了保证消费者在发生故障或宕机再次重启后，仍然可以读取未处理完的消息，Streams 会自动使用内部队列（也称为 PENDING List）留存消费组里每个消费者读取的消息，直到消费者使用 XACK 命令通知 Streams“消息已经处理完成”。如果消费者没有成功处理消息，它就不会给 Streams 发送 XACK 命令，消息仍然会留存。此时，消费者可以在重启后，用 XPENDING 命令查看已读取、但尚未确认处理完成的消息。</p>
+<p>执行如下命令：</p>
+<ol>
+<li>查看 group2 中各个消费者已读取、但尚未确认的消息个数。其中，XPENDING 返回结果的第二、三行分别表示 group2 中所有消费者读取的消息最小 ID 和最大 ID。</li>
+<li>查看某个消费者具体读取了哪些数据</li>
+<li>通过2步骤可以看到，consumer2 已读取的消息的 ID 是 1599274912765-0。一旦消息 1599274912765-0 被 consumer2 处理了，consumer2 就可以使用 XACK 命令通知 Streams，然后这条消息就会被删除。当我们再使用 XPENDING 命令查看时，就可以看到，consumer2 已经没有已读取、但尚未确认处理的消息。</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1</span></span><br><span class="line">127.0.0.1:6379&gt; XPENDING mqstream group2</span><br><span class="line">1) (<span class="built_in">integer</span>) 3</span><br><span class="line">2) <span class="string">"1631010537963-0"</span></span><br><span class="line">3) <span class="string">"1631010542237-0"</span></span><br><span class="line">4) 1) 1) <span class="string">"consumer1"</span></span><br><span class="line">      2) <span class="string">"1"</span></span><br><span class="line">   2) 1) <span class="string">"consumer2"</span></span><br><span class="line">      2) <span class="string">"1"</span></span><br><span class="line">   3) 1) <span class="string">"consumer3"</span></span><br><span class="line">      2) <span class="string">"1"</span></span><br><span class="line"><span class="comment"># 2</span></span><br><span class="line">127.0.0.1:6379&gt; XPENDING mqstream group2 - + 10 consumer2</span><br><span class="line">1) 1) <span class="string">"1631010540381-0"</span></span><br><span class="line">   2) <span class="string">"consumer2"</span></span><br><span class="line">   3) (<span class="built_in">integer</span>) 1820141</span><br><span class="line">   4) (<span class="built_in">integer</span>) 1</span><br><span class="line"><span class="comment"># 3</span></span><br><span class="line">127.0.0.1:6379&gt; XACK mqstream group2 1631010540381-0</span><br><span class="line">(<span class="built_in">integer</span>) 1</span><br><span class="line">127.0.0.1:6379&gt; XPENDING mqstream group2 - + 10 consumer2</span><br><span class="line">(empty array)</span><br></pre></td></tr></table></figure>
+<h4 id="五、总结"><a href="#五、总结" class="headerlink" title="五、总结"></a>五、总结</h4><p>前面介绍了 List、Pub/Sub、Stream 在做队列的使用方式</p>
+<p>之后又把 Redis 和专业的消息队列中间件做对比，发现 Redis 的不足之处。</p>
+<p>最后，我们得出 Redis 做队列的合适场景。</p>
+<p>这里我也列了一个表格，总结了它们各自的优缺点。</p>
+<p><img src="https://blob.hixforever.com/20210908141139.png" alt=""></p>
+<h4 id="六、后记"><a href="#六、后记" class="headerlink" title="六、后记"></a>六、后记</h4><p>最后，再聊一聊关于「<strong>技术方案选型</strong>」的问题。</p>
+<p>我们在分析 Redis 细节时，一直在提出问题，然后寻找更好的解决方案，在文章最后，又聊到一个专业的消息队列应该怎么做。</p>
+<p>其实，我们在讨论技术选型时，就是一个关于如何取舍的问题。</p>
+<p>而这里我想传达给你的信息是，<strong>在面对技术选型时，不要不经过思考就觉得哪个方案好，哪个方案不好</strong>。</p>
+<p>你需要根据具体场景具体分析，这里我把这个分析过程分为 2 个层面：</p>
+<ol>
+<li>业务功能角度</li>
+<li>技术资源角度</li>
+</ol>
+<p>这篇文章所讲到的内容，都是以业务功能角度出发做决策的。</p>
+<p>但这里的第二点，从技术资源角度出发，其实也很重要。</p>
+<p>技术资源的角度是说，<strong>你所处的公司环境、技术资源能否匹配这些技术方案</strong>。</p>
+<p>这个怎么解释呢？</p>
+<p>简单来讲，就是你所在的公司、团队，是否有匹配的资源能 hold 住这些技术方案。</p>
+<p>我们都知道 Kafka、RabbitMQ 是非常专业的消息中间件，但它们的部署和运维，相比于 Redis 来说，也会更复杂一些。</p>
+<p>如果你在一个大公司，公司本身就有优秀的运维团队，那么使用这些中间件肯定没问题，因为有足够优秀的人能 hold 住这些中间件，公司也会投入人力和时间在这个方向上。</p>
+<p>但如果你是在一个初创公司，业务正处在快速发展期，暂时没有能 hold 住这些中间件的团队和人，如果贸然使用这些组件，当发生故障时，排查问题也会变得很困难，甚至会阻碍业务的发展。</p>
+<p>而这种情形下，如果公司的技术人员对于 Redis 都很熟，综合评估来看，Redis 也基本可以满足业务 90% 的需求，那当下选择 Redis 未必不是一个好的决策。</p>
+<p>所以，<strong>做技术选型不只是技术问题，还与人、团队、管理、组织结构有关</strong>。</p>
+<p>也正是因为这些原因，当你在和别人讨论技术选型问题时，你会发现每个公司的做法都不相同。</p>
+<p>毕竟每个公司所处的环境和文化不一样，做出的决策当然就会各有差异。</p>
+<p>如果你不了解这其中的逻辑，那在做技术选型时，只会趋于表面现象，无法深入到问题根源。</p>
+<p>而一旦你理解了这个逻辑，那么你在看待这个问题时，不仅对于技术会有更加深刻认识，对技术资源和人的把握，也会更加清晰。</p>
+<p>希望你以后在做技术选型时，能够把这些因素也考虑在内，这对你的技术成长之路也是非常有帮助的。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/09/02/docker-nginx-install/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2021/09/02/docker-nginx-install/" itemprop="url">Docker 部署安装Nginx</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-09-02T09:00:36+08:00">
+                2021-09-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Docker/" itemprop="url" rel="index">
+                    <span itemprop="name">Docker</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h3 id="Docker-部署安装Nginx"><a href="#Docker-部署安装Nginx" class="headerlink" title="Docker 部署安装Nginx"></a>Docker 部署安装Nginx</h3><h4 id="一、"><a href="#一、" class="headerlink" title="一、"></a>一、</h4>
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/30/markdown-tips/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2515,565 +3233,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/08/04/mysql-performance-analysis-explain/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Henry Ch">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="宁静的世界">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/08/04/mysql-performance-analysis-explain/" itemprop="url">Mysql 性能分析工具Explain</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-08-04T20:09:43+08:00">
-                2019-08-04
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Mysql/" itemprop="url" rel="index">
-                    <span itemprop="name">Mysql</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>MySQL 提供了一个 EXPLAIN 命令, 它可以对 <code>SELECT</code> 语句进行分析, 并输出 <code>SELECT</code> 执行的详细信息, 以供开发人员针对性优化.<br>EXPLAIN 命令用法十分简单, 在 SELECT 语句前加上 Explain 就可以了, 例如:</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">EXPLAIN SELECT * from user_info WHERE id &lt; 300;</span><br></pre></td></tr></table></figure>
-<h2 id="EXPLAIN-输出列"><a href="#EXPLAIN-输出列" class="headerlink" title="EXPLAIN 输出列"></a>EXPLAIN 输出列</h2><table>
-<thead>
-<tr>
-<th>名称</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>id</td>
-<td>执行编号，标识select所属的行。如果在语句中没子查询或关联查询，只有唯一的select，每行都将显示1。否则，内层的select语句一般会顺序编号，对应于其在原始语句中的位置</td>
-</tr>
-<tr>
-<td>select_type</td>
-<td>显示本行是简单或复杂select。如果查询有任何复杂的子查询，则最外层标记为PRIMARY（DERIVED、UNION、UNION RESUlT）</td>
-</tr>
-<tr>
-<td>table</td>
-<td>访问引用哪个表（引用某个查询，如“derived3”）</td>
-</tr>
-<tr>
-<td>type</td>
-<td>数据访问/读取操作类型（ALL、index、range、ref、eq_ref、const/system、NULL）</td>
-</tr>
-<tr>
-<td>possible_keys</td>
-<td>揭示哪一些索引可能有利于高效的查找</td>
-</tr>
-<tr>
-<td>key</td>
-<td>显示mysql决定采用哪个索引来优化查询</td>
-</tr>
-<tr>
-<td>key_len</td>
-<td>显示mysql在索引里使用的字节数</td>
-</tr>
-<tr>
-<td>ref</td>
-<td>显示了之前的表在key列记录的索引中查找值所用的列或常量</td>
-</tr>
-<tr>
-<td>rows</td>
-<td>为了找到所需的行而需要读取的行数，估算值，不精确。通过把所有rows列值相乘，可粗略估算整个查询会检查的行数</td>
-</tr>
-<tr>
-<td>filtered</td>
-<td>表示此查询条件所过滤的数据的百分比</td>
-</tr>
-<tr>
-<td>extra</td>
-<td>额外的信息</td>
-</tr>
-</tbody>
-</table>
-<h3 id="对于EXPLAIN比较重要字段解析"><a href="#对于EXPLAIN比较重要字段解析" class="headerlink" title="对于EXPLAIN比较重要字段解析"></a>对于EXPLAIN比较重要字段解析</h3><h4 id="select-type"><a href="#select-type" class="headerlink" title="select_type"></a>select_type</h4><p><code>select_type</code> 表示了查询的类型, 它的常用取值有:</p>
-<table>
-<thead>
-<tr>
-<th>类型</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>simple</td>
-<td>简单查询，不包含子查询和union</td>
-</tr>
-<tr>
-<td>primary</td>
-<td>包含union或者子查询，最外层的部分标记为primary</td>
-</tr>
-<tr>
-<td>subquery</td>
-<td>一般子查询中的子查询被标记为subquery，也就是位于select列表中的查询</td>
-</tr>
-<tr>
-<td>derived</td>
-<td>派生表——该临时表是从子查询派生出来的，位于form中的子查询</td>
-</tr>
-<tr>
-<td>union</td>
-<td>位于union中第二个及其以后的子查询被标记为union，第一个就被标记为primary如果是union位于from中则标记为derived</td>
-</tr>
-<tr>
-<td>union result</td>
-<td>用来从匿名临时表里检索结果的select被标记为union result</td>
-</tr>
-<tr>
-<td>dependent union</td>
-<td>顾名思义，首先需要满足UNION的条件，及UNION中第二个以及后面的SELECT语句，同时该语句依赖外部的查询</td>
-</tr>
-<tr>
-<td>subquery</td>
-<td>子查询中第一个SELECT语句</td>
-</tr>
-<tr>
-<td>dependent subquery</td>
-<td>和DEPENDENT UNION相对UNION一样</td>
-</tr>
-</tbody>
-</table>
-<h4 id="table"><a href="#table" class="headerlink" title="table"></a>table</h4><p><code>table</code>表示对应行正在访问哪一个表，表名或者别名</p>
-<ul>
-<li>关联优化器会为查询选择关联顺序，左侧深度优先</li>
-<li>当from中有子查询的时候，表名是derivedN的形式，N指向子查询，也就是explain结果中的下一列</li>
-<li>当有union result的时候，表名是union 1,2等的形式，1,2表示参与union的query id</li>
-</ul>
-<p>注意：MySQL对待这些表和普通表一样，但是这些“临时表”是没有任何索引的。</p>
-<h4 id="type"><a href="#type" class="headerlink" title="type"></a>type</h4><p><code>type</code>显示的是访问类型，是较为重要的一个指标，结果值从好到坏依次是：<br><strong>system &gt; const &gt; eq_ref &gt; ref &gt; fulltext &gt; ref_or_null &gt; index_merge &gt; unique_subquery &gt; index_subquery &gt; range &gt; index &gt; ALL</strong> ，一般来说，得保证查询至少达到range级别，最好能达到ref。</p>
-<table>
-<thead>
-<tr>
-<th>类型</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>All</td>
-<td>最坏的情况,全表扫描</td>
-</tr>
-<tr>
-<td>index</td>
-<td>和全表扫描一样。只是扫描表的时候按照索引次序进行而不是行。主要优点就是避免了排序, 但是开销仍然非常大。如在Extra列看到Using index，说明正在使用覆盖索引，只扫描索引的数据，它比按索引次序全表扫描的开销要小很多</td>
-</tr>
-<tr>
-<td>range</td>
-<td>范围扫描，一个有限制的索引扫描。key 列显示使用了哪个索引。当使用=、 &lt;&gt;、&gt;、&gt;=、&lt;、&lt;=、IS NULL、&lt;=&gt;、BETWEEN 或者 IN 操作符,用常量比较关键字列时,可以使用 range</td>
-</tr>
-<tr>
-<td>ref</td>
-<td>一种索引访问，它返回所有匹配某个单个值的行。此类索引访问只有当使用非唯一性索引或唯一性索引非唯一性前缀时才会发生。这个类型跟eq_ref不同的是，它用在关联操作只使用了索引的最左前缀，或者索引不是UNIQUE和PRIMARY KEY。ref可以用于使用=或&lt;=&gt;操作符的带索引的列。</td>
-</tr>
-<tr>
-<td>eq_ref</td>
-<td>最多只返回一条符合条件的记录。使用唯一性索引或主键查找时会发生 （高效）</td>
-</tr>
-<tr>
-<td>const</td>
-<td>当确定最多只会有一行匹配的时候，MySQL优化器会在查询前读取它而且只读取一次，因此非常快。当主键放入where子句时，mysql把这个查询转为一个常量（高效）</td>
-</tr>
-<tr>
-<td>system</td>
-<td>这是const连接类型的一种特例，表仅有一行满足条件。</td>
-</tr>
-<tr>
-<td>Null</td>
-<td>意味说mysql能在优化阶段分解查询语句，在执行阶段甚至用不到访问表或索引（高效）</td>
-</tr>
-</tbody>
-</table>
-<h4 id="possible-keys"><a href="#possible-keys" class="headerlink" title="possible_keys"></a>possible_keys</h4><p><code>possible_keys</code>显示查询使用了哪些索引，表示该索引可以进行高效地查找，但是列出来的索引对于后续优化过程可能是没有用的</p>
-<h4 id="key"><a href="#key" class="headerlink" title="key"></a>key</h4><p><code>key</code>列显示MySQL实际决定使用的键（索引）。如果没有选择索引，键是NULL。要想强制MySQL使用或忽视possible_keys列中的索引，在查询中使用FORCE INDEX、USE INDEX或者IGNORE INDEX。</p>
-<h4 id="key-len"><a href="#key-len" class="headerlink" title="key_len"></a>key_len</h4><p><code>key_len</code>列显示MySQL决定使用的键长度。如果键是NULL，则长度为NULL。使用的索引的长度。在不损失精确性的情况下，长度越短越好 。</p>
-<h4 id="ref"><a href="#ref" class="headerlink" title="ref"></a>ref</h4><p><code>ref</code>列显示使用哪个列或常数与key一起从表中选择行。</p>
-<h4 id="rows"><a href="#rows" class="headerlink" title="rows"></a>rows</h4><p><code>rows</code>列显示MySQL认为它执行查询时必须检查的行数。注意这是一个预估值。</p>
-<h4 id="Extra"><a href="#Extra" class="headerlink" title="Extra"></a>Extra</h4><p><code>Extra</code>是EXPLAIN输出中另外一个很重要的列，该列显示MySQL在查询过程中的一些详细信息，MySQL查询优化器执行查询的过程中对查询计划的重要补充信息。</p>
-<table>
-<thead>
-<tr>
-<th>类型</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Using filesort</td>
-<td>MySQL有两种方式可以生成有序的结果，通过排序操作或者使用索引，当Extra中出现了Using filesort 说明MySQL使用了后者，但注意虽然叫filesort但并不是说明就是用了文件来进行排序，只要可能排序都是在内存里完成的。大部分情况下利用索引排序更快，所以一般这时也要考虑优化查询了。使用文件完成排序操作，这是可能是order by，group by语句的结果，这可能是一个CPU密集型的过程，可以通过选择合适的索引来改进性能，用索引来为查询结果排序。</td>
-</tr>
-<tr>
-<td>Using temporary</td>
-<td>用临时表保存中间结果，常用于GROUP BY 和 ORDER BY操作中，一般看到它说明查询需要优化了，就算避免不了临时表的使用也要尽量避免硬盘临时表的使用。</td>
-</tr>
-<tr>
-<td>Not exists</td>
-<td>MYSQL优化了LEFT JOIN，一旦它找到了匹配LEFT JOIN标准的行， 就不再搜索了。</td>
-</tr>
-<tr>
-<td>Using index</td>
-<td>这是MySQL 5.6出来的新特性，叫做“索引条件推送”。简单说一点就是MySQL原来在索引上是不能执行如like这样的操作的，但是现在可以了，这样减少了不必要的IO操作，但是只能用在二级索引上。</td>
-</tr>
-<tr>
-<td>Using where</td>
-<td>使用了WHERE从句来限制哪些行将与下一张表匹配或者是返回给用户。<strong>注意</strong>：Extra列出现Using where表示MySQL服务器将存储引擎返回服务层以后再应用WHERE条件过滤。</td>
-</tr>
-<tr>
-<td>Using join buffer</td>
-<td>使用了连接缓存：<strong>Block Nested Loop</strong>，连接算法是块嵌套循环连接;<strong>Batched Key Access</strong>，连接算法是批量索引连接</td>
-</tr>
-<tr>
-<td>impossible where</td>
-<td>where子句的值总是false，不能用来获取任何元组</td>
-</tr>
-<tr>
-<td>select tables optimized away</td>
-<td>在没有GROUP BY子句的情况下，基于索引优化MIN/MAX操作，或者对于MyISAM存储引擎优化COUNT(*)操作，不必等到执行阶段再进行计算，查询执行计划生成的阶段即完成优化。</td>
-</tr>
-<tr>
-<td>distinct</td>
-<td>优化distinct操作，在找到第一匹配的元组后即停止找同样值的动作</td>
-</tr>
-</tbody>
-</table>
-<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="https://link.jianshu.com/?t=https%3A%2F%2Fdev.mysql.com%2Fdoc%2Frefman%2F5.7%2Fen%2Fexplain-output.html" target="_blank" rel="noopener">https://dev.mysql.com/doc/refman/5.7/en/explain-output.html</a></p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/08/04/android-activity-lifecycle/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Henry Ch">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="宁静的世界">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/08/04/android-activity-lifecycle/" itemprop="url">Activity的生命周期和启动模式</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-08-04T16:03:04+08:00">
-                2019-08-04
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android/" itemprop="url" rel="index">
-                    <span itemprop="name">Android</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="1-Activity的生命周期分析"><a href="#1-Activity的生命周期分析" class="headerlink" title="1. Activity的生命周期分析"></a>1. Activity的生命周期分析</h2><p>Activity的生命周期分为两个部分，一个是典型情况下的生命周期，另一个是异常情况下的生命周期。所谓的典型情况下的生命周期是指，是指有用户参与的情况下，Activity所经过的生命周期的改变。而异常情况下的生命周期是指Activity被系统回收，或者当前设备的Configuration发生改变从而导致Activity被销毁重建。</p>
-<h3 id="1-1-典型情况下的生命周期"><a href="#1-1-典型情况下的生命周期" class="headerlink" title="1.1. 典型情况下的生命周期"></a>1.1. 典型情况下的生命周期</h3><p>在正常情况下，Activity会经历的生命周期有：</p>
-<ul>
-<li><strong>onCreate</strong>:表示Activity正在被创建，我们可以在这个方法中做一些初始化的工作。</li>
-<li><strong>onStart</strong>:表示Activity正在被启动，这个时候Activity已经可见了，但是还没有出现在前台，还无法和用户交互。（可以理解为Activity已经显示出来了，但是我们还看不见）</li>
-<li><strong>onRestart</strong>:表示Activity重新启动，此时Activity从不可见状态变为可见状态时，onRestart就会被调用。</li>
-<li><strong>onResume</strong>:表示Activity已经可见了，并且出现在前台。当Activity界面获取焦点的时候（界面按钮可以被点击，文本框可以输入内容）。</li>
-<li><strong>onPause</strong>:表示Activity已经停止，此时Activity界面失去焦点的时候（界面按钮不可以被点击，文本框不可以输入内容，但是界面，用户仍然能看见）。此方法通常用于确认对持久性数据的未保存更改、停止动画以及其他可能消耗 CPU 的内容，<strong>不能做很耗时的操作</strong>。</li>
-<li><strong>onStop</strong>:表示Activity即将停止，此时Activity界面用户不可见时。可以做稍微重量级的回收工作，但是也不能太耗时。</li>
-<li><strong>onDestroy</strong>:表示Activity即将被销毁，可以做一些回收工作和最终的资源释放。<br></li>
-</ul>
-<p><strong>可将Android典型情况下的生命周期分为三种</strong></p>
-<ul>
-<li>完整的生命周期<br><br>onCreate–&gt;onStart–&gt;onResume–&gt;onPause–&gt;onStop–&gt;onDestroy</li>
-<li>可视生命周期<br><br>onStart–&gt;onResume–&gt;onPause–&gt;onStop</li>
-<li>前台生命周期<br><br>onResume–&gt;onPause<br></li>
-</ul>
-<p><strong>下面是google官方给出的Activity生命周期的切换过程:</strong></p>
-<p><img src="http://i.imgur.com/glNzLpb.png" alt=""></p>
-<p><strong>需要注意的问题</strong></p>
-<p>因为前一个Activity执行完成onPause方法以后新Activity的onResume才能执行。所以我们如果在onPause或者onStop中执行耗时操作，尽量在onStop中执行。</p>
-<h3 id="1-2-异常情况下的生命周期分析"><a href="#1-2-异常情况下的生命周期分析" class="headerlink" title="1.2 异常情况下的生命周期分析"></a>1.2 异常情况下的生命周期分析</h3><p>当系统配置发生变化时，或者系统内存不足时，Activity可能被杀死。</p>
-<ul>
-<li>资源相关的系统配置发生改变导致Activity被杀死并重新创建。<br><br>当系统配置发生改变后，Activity会被销毁onPause、onStop、onDestroy都会被调用。</li>
-<li>除此以外系统还会调用onSaveInstanceState来保存当前的Activity的状态。这个方法的调用时机是在onStop之前，和onPause没有什么时序关系。该方法正常情况下不会被调用，只有Activity以外终止的时候才会被调用。</li>
-<li>Activity重新被创建的时候，系统会调用onRestoreInstanceState,我们可以通过该方法取出，onSaveInstanceState方法中所保存的数据。该方法的调用时机发生在onStart之后。</li>
-<li>资源内存不足导致低优先级的Activity被杀死<br><br>Activity按照优先级从高到低的可以分为三种：</li>
-<li>前台Activity——————正在和用户交互的Activity，优先级最高。</li>
-<li>可见但非前台Activity——————比如Activity弹出个对话框。</li>
-<li>后台Activity——————已经被暂停的Activity，比如执行了onStop，优先级最低</li>
-</ul>
-<p><strong>Tips：</strong><br>当系统配置改变后，Activity会被重新创建，如果想Activity不被系统重新创建那么我们可以设置Activity的configChanges属性。<br><br><code>android:configChanges=&quot;orientation|screenSize&quot;</code></p>
-<h2 id="2-Activity的启动模式"><a href="#2-Activity的启动模式" class="headerlink" title="2. Activity的启动模式"></a>2. Activity的启动模式</h2><p>activity的启动模式共有四种。</p>
-<ul>
-<li><strong>standard</strong>：标准模式，也是系统的默认模式。每次启动一个Activity都会重新创建一个新的实例。这种模式下，谁启动了这个Activity，那么这个Activity就在启动它那个Activity的堆栈中。</li>
-</ul>
-<p><strong>Tips：</strong><br>ApplicationContext启动standard模式的Activity的时候会报错。因为非Activity的Context并没有任务栈。要解决这个问题的方法，为带启动Activity指定FLAG_ACTIVITY_NEW_TASK标记为。</p>
-<ul>
-<li><strong>singleTop</strong>：栈顶复用模式。如果新的Activity已经位于任务栈的栈顶，那么此Activity不会被重新创建，同时他的onNewIntent方法会被回调。如果不是位于栈顶，那么新的Activity仍然会被重新创建。</li>
-<li><strong>singleTask</strong>：栈内复用模式。这是一种单实例模式，这种模式下只要Activity在一个栈中存在，那么多次启动此Activity都不会重新创建实例，系统也会回调onNewIntent。<br>注意：</li>
-<li>任务栈S2和ActivityD两个都不存在，那么系统先创建任务栈S2，然后将D的实例压入到栈S2中。</li>
-<li>如果存在S2直接将D的实例压入到栈S2中。</li>
-<li>singleTask启动模式自带cleartop的功能，例如ABCD，四个Activity，从栈顶到栈底。如果这时候启动DActivity那么任务栈中只剩下D的实例。</li>
-<li><p><strong>singleInstance</strong>：单实例模式，加强的singleTask模式，除了具有singleTask的所有特性以外，这种模式的Activity只能单独位于一个任务栈中。</p>
-<h2 id="3-Activity的Flags"><a href="#3-Activity的Flags" class="headerlink" title="3. Activity的Flags"></a>3. Activity的Flags</h2><p>主要介绍一下比较常用的Flags</p>
-</li>
-<li><p><strong>FLAG_ACTIVITY_NEW_TASK：</strong>这个标记位的作用是为Activity指定“singleTask”启动模式。</p>
-</li>
-<li><strong>FLAG_ACTIVITY_SINGLE_TOP：</strong>这个标志位的作用是为Activity指定”singleTop”启动模式。</li>
-<li><strong>FLAG_ACTIVITY_CLEAR_TOP：</strong>当这个activity启动的时候，在同一个任务栈中位于它上面的Activity都要出栈。</li>
-<li><strong>FLAG_ACTIVITY_EXCLUDE_RECENTS：</strong>具有这个标记的Activity不会出现在历史的Activity的列表中，当某些情况下我们不希望用户通过历史列表返回到我们的Activity可以使用这个。等同于在XML中指定Activity的属性<code>android:excludeFromRecents=&quot;true&quot;</code></li>
-</ul>
-<h2 id="4-IntentFilter的匹配规则"><a href="#4-IntentFilter的匹配规则" class="headerlink" title="4. IntentFilter的匹配规则"></a>4. IntentFilter的匹配规则</h2><p>我们知道启动Activity分为两种，显示调用和隐式调用。显示调用需要指定被启动对象的组件信息，包括包名类名，而隐式调用需要明确指定组件信息。隐式调用需要Intent能够匹配目标组件的IntentFilter中所设置的过滤信息。下面我们来介绍一下IntentFilter中的各种属性和匹配规则。</p>
-<ul>
-<li><strong>action的匹配规则：</strong>action是一个字符串，action的匹配要求Intent中的action存在并且必须和过滤规则中的其中一个action相同，action区分大小写。</li>
-<li><strong>category的匹配规则：</strong>category是一个字符串，Intent中的每一个category都必须和过滤规则中的category相同。Intent中可以没有category，仍然可以匹配成功。因为系统在调用startActivity或者startActivityForResult的时候会为Intent加上“android.intentcategory.DEFAULT”这个category。</li>
-<li><strong>data的匹配规则：</strong>data的语法<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt; <span class="attr">data</span>  <span class="attr">android:scheme</span>=<span class="string">"string"</span></span></span><br><span class="line"><span class="tag"><span class="attr">android:host</span>=<span class="string">"string"</span></span></span><br><span class="line"><span class="tag"><span class="attr">android:port</span>=<span class="string">"string"</span></span></span><br><span class="line"><span class="tag"><span class="attr">android:path</span>=<span class="string">"string"</span></span></span><br><span class="line"><span class="tag"><span class="attr">android:pathPattern</span>=<span class="string">"string"</span></span></span><br><span class="line"><span class="tag"><span class="attr">android:pathPrefix</span>=<span class="string">"string"</span></span></span><br><span class="line"><span class="tag"><span class="attr">android:mimeType</span>=<span class="string">"string"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
-</li>
-</ul>
-<p>data由两部分组成，mimeType和URI。mimeType指媒体类型，比如image/jpeg、audio/mpeg4generic和video/*等，可以表示图片、文本、视频等不同的媒体格式，而URI中包含的数据就比较多了。下面是URI的结构：<br><br><code>&lt;scheme&gt;://&lt;host&gt;:&lt;port&gt;/[&lt;path&gt;|&lt;pathPrefix&gt;|&lt;pathPattern&gt;]</code><br><br><code>content://com.example.project:200/folder/subfolder/etc</code><br><br><code>http://www.baidu.com:80/search/info</code></p>
-<p>下面介绍每个数据的含义。</p>
-<ul>
-<li><strong>Scheme：</strong>URI的模式，比如http、file、content等。如果URI中没有指定scheme，那么整个URI的其他参数是无效的。</li>
-<li><strong>Host：</strong>URI的主机名，比如<a href="http://www.baidu.com，如果host未指定，那么整个URI的其他参数是无效的。" target="_blank" rel="noopener">www.baidu.com，如果host未指定，那么整个URI的其他参数是无效的。</a></li>
-<li><strong>Port：</strong>URI中的端口号，比如80，当URI中的scheme和host参数指定的时候，port参数才有意义。</li>
-<li><strong>Path、pathPattern和pathPrefix：</strong>这三个参数表示路径信息。</li>
-<li><strong>path：</strong>表示完整路径信息</li>
-<li><strong>pathPattern：</strong>表示完整路径信息，但是它里面可以包含通配符“ <em> ”，“ </em> ”表示0个或者多个字符。</li>
-<li><strong>pathPrefix：</strong>表示路径前缀信息。</li>
-</ul>
-<p><strong>注意：</strong><br>如果要为Intent指定完整的data，必须调用setDataAndType方法，不能先调用setData在调用setType，因为两个方法彼此会清除对方的值。</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -3128,7 +3287,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-count">13</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -3139,7 +3298,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-count">8</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -3150,7 +3309,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-count">20</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
