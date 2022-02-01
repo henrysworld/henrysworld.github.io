@@ -252,6 +252,313 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/12/01/nginx-keepalived/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2021/12/01/nginx-keepalived/" itemprop="url">搭建Keepalived Nginx高可用Web集群</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-12-01T14:23:58+08:00">
+                2021-12-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nginx/" itemprop="url" rel="index">
+                    <span itemprop="name">Nginx</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nginx/Keepalived/" itemprop="url" rel="index">
+                    <span itemprop="name">Keepalived</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h3 id="搭建Keepalived-Nginx高可用服务集群"><a href="#搭建Keepalived-Nginx高可用服务集群" class="headerlink" title="搭建Keepalived + Nginx高可用服务集群"></a>搭建Keepalived + Nginx高可用服务集群</h3><h4 id="一、操作场景"><a href="#一、操作场景" class="headerlink" title="一、操作场景"></a>一、操作场景</h4><p>虚拟IP（VIP）主要用于弹性云服务器的主备切换，达到高可用性HA（High Availability）的目的。当主服务器发生故障无法对外提供服务时，动态将虚拟IP切换到备服务器，继续对外提供服务。</p>
+<p>本文档以弹性云服务器的CentOS 7.5 64位操作系统为例，实现Keepalived+Nginx高可用服务集群搭建。</p>
+<h4 id="二、背景知识"><a href="#二、背景知识" class="headerlink" title="二、背景知识"></a>二、背景知识</h4><h4 id="三、网络拓扑"><a href="#三、网络拓扑" class="headerlink" title="三、网络拓扑"></a>三、网络拓扑</h4><p>数据规划如下：</p>
+<p>表1 数据规划</p>
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>产品</th>
+<th>数量</th>
+<th>规格</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>虚拟私有云（VPC）</td>
+<td>1</td>
+<td>192.168.0.0/16</td>
+</tr>
+<tr>
+<td></td>
+<td>子网（subnet）</td>
+<td>1</td>
+<td>192.168.0.0/24</td>
+</tr>
+<tr>
+<td>2</td>
+<td>弹性云服务器（ECS）</td>
+<td>2</td>
+<td>4vCPUs 8GB CentOS 7.5 64bit</td>
+</tr>
+<tr>
+<td></td>
+<td>子网IP（subnet IP）</td>
+<td>2</td>
+<td>ecs-HA1：192.168.192.39<br>ecs-HA2：192.168.192.41</td>
+</tr>
+<tr>
+<td>3</td>
+<td>弹性公网IP（EIP）</td>
+<td>1</td>
+<td>116.63.115.186</td>
+</tr>
+<tr>
+<td></td>
+<td>虚拟IP（VIP）</td>
+<td>1</td>
+<td>192.168.192.100</td>
+</tr>
+</tbody>
+</table>
+<p>实现方式如下：</p>
+<ul>
+<li>将2台同子网的弹性云服务器配置Keepalived，一台为主服务器，一台为备份服务器。</li>
+<li>将这2台弹性云服务器绑定同一个虚拟IP。</li>
+<li>将虚拟IP与弹性公网IP绑定，从互联网可以访问绑定了该虚拟IP地址的主备云服务器。</li>
+</ul>
+<p>图1 组网图</p>
+<p><img src="https://blob.hixforever.com/20211208132827.png" alt=""></p>
+<h4 id="三、操作步骤"><a href="#三、操作步骤" class="headerlink" title="三、操作步骤"></a>三、操作步骤</h4><h5 id="1-nginx"><a href="#1-nginx" class="headerlink" title="1. nginx"></a>1. nginx</h5><h6 id="1-1-在ECS-HA1和ECS-HA2分别安装Nginx"><a href="#1-1-在ECS-HA1和ECS-HA2分别安装Nginx" class="headerlink" title="1.1 在ECS-HA1和ECS-HA2分别安装Nginx"></a>1.1 在ECS-HA1和ECS-HA2分别安装Nginx</h6><ul>
+<li><p>RPM包地址：<a href="http://nginx.org/packages/centos/7/x86_64/RPMS/" target="_blank" rel="noopener">http://nginx.org/packages/centos/7/x86_64/RPMS/</a></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> wget http://nginx.org/packages/centos/7/x86_64/RPMS/nginx-1.20.2-1.el7.ngx.x86_64.rpm </span></span><br><span class="line"><span class="meta">$</span><span class="bash"> rpm -ivh nginx-1.20.2-1.el7.ngx.x86_64.rpm</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>yum安装</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> yum install nginx</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> systemctl start nginx</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> systemctl <span class="built_in">enable</span> nginx</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> systemctl status nginx</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h6 id="1-2-配置Nginx"><a href="#1-2-配置Nginx" class="headerlink" title="1.2 配置Nginx"></a>1.2 配置Nginx</h6><ul>
+<li><p>主机ECS-HA1 nginx.conf配置</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># For more information on configuration, see:</span></span><br><span class="line"><span class="comment">#   * Official English Documentation: http://nginx.org/en/docs/</span></span><br><span class="line"><span class="comment">#   * Official Russian Documentation: http://nginx.org/ru/docs/</span></span><br><span class="line"></span><br><span class="line"><span class="attribute">user</span> nginx;</span><br><span class="line"><span class="attribute">worker_processes</span> auto;</span><br><span class="line"><span class="attribute">error_log</span> /mnt/sse/log/nginx/error.log;</span><br><span class="line"><span class="attribute">pid</span> /run/nginx.pid;</span><br><span class="line"></span><br><span class="line"><span class="comment"># Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.</span></span><br><span class="line"><span class="attribute">include</span> /usr/share/nginx/modules/<span class="regexp">*.conf</span>;</span><br><span class="line"></span><br><span class="line"><span class="section">events</span> &#123;</span><br><span class="line">    <span class="attribute">worker_connections</span> <span class="number">1024</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="section">http</span> &#123;</span><br><span class="line">    <span class="attribute">log_format</span>  main  <span class="string">'<span class="variable">$status</span> <span class="variable">$body_bytes_sent</span> "<span class="variable">$http_referer</span>" '</span></span><br><span class="line">                      <span class="string">'"<span class="variable">$http_user_agent</span>" "<span class="variable">$http_x_forwarded_for</span>"'</span></span><br><span class="line">                      <span class="string">'"rl=<span class="variable">$request_length</span>" <span class="variable">$remote_addr</span> - <span class="variable">$remote_user</span> [<span class="variable">$time_local</span>] "<span class="variable">$request</span>"'</span></span><br><span class="line">                      <span class="string">'rt=<span class="variable">$request_time</span> uct="<span class="variable">$upstream_connect_time</span>" uht="<span class="variable">$upstream_header_time</span>" urt="<span class="variable">$upstream_response_time</span>"'</span>;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">access_log</span>  /mnt/sse/log/nginx/access.log  main;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">sendfile</span>            <span class="literal">on</span>;</span><br><span class="line">    <span class="attribute">tcp_nopush</span>          <span class="literal">on</span>;</span><br><span class="line">    <span class="attribute">tcp_nodelay</span>         <span class="literal">on</span>;</span><br><span class="line">    <span class="attribute">keepalive_timeout</span>   <span class="number">65</span>;</span><br><span class="line">    <span class="attribute">types_hash_max_size</span> <span class="number">4096</span>;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">include</span>             /etc/nginx/mime.types;</span><br><span class="line">    <span class="attribute">default_type</span>        application/octet-stream;</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Load modular configuration files from the /etc/nginx/conf.d directory.</span></span><br><span class="line">    <span class="comment"># See http://nginx.org/en/docs/ngx_core_module.html#include</span></span><br><span class="line">    <span class="comment"># for more information.</span></span><br><span class="line">    <span class="attribute">include</span> /etc/nginx/conf.d/<span class="regexp">*.conf</span>;</span><br><span class="line"></span><br><span class="line">    <span class="section">server</span> &#123;</span><br><span class="line">        <span class="attribute">listen</span>       <span class="number">80</span>;</span><br><span class="line">        <span class="attribute">listen</span>       [::]:<span class="number">80</span>;</span><br><span class="line">        <span class="attribute">server_name</span>  _;</span><br><span class="line">        <span class="attribute">root</span>         /usr/share/nginx/html;</span><br><span class="line"></span><br><span class="line">        <span class="comment"># Load configuration files for the default server block.</span></span><br><span class="line">        <span class="attribute">include</span> /etc/nginx/default.d/<span class="regexp">*.conf</span>;</span><br><span class="line"></span><br><span class="line">        <span class="attribute">error_page</span> <span class="number">404</span> /<span class="number">404</span>.html;</span><br><span class="line">        <span class="attribute">location</span> = /<span class="number">404</span>.html &#123;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="attribute">error_page</span> <span class="number">500</span> <span class="number">502</span> <span class="number">503</span> <span class="number">504</span> /50x.html;</span><br><span class="line">        <span class="attribute">location</span> = /50x.html &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># Settings for a TLS enabled server.</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#    server &#123;</span></span><br><span class="line"><span class="comment">#        listen       443 ssl http2;</span></span><br><span class="line"><span class="comment">#        listen       [::]:443 ssl http2;</span></span><br><span class="line"><span class="comment">#        server_name  _;</span></span><br><span class="line"><span class="comment">#        root         /usr/share/nginx/html;</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#        ssl_certificate "/etc/pki/nginx/server.crt";</span></span><br><span class="line"><span class="comment">#        ssl_certificate_key "/etc/pki/nginx/private/server.key";</span></span><br><span class="line"><span class="comment">#        ssl_session_cache shared:SSL:1m;</span></span><br><span class="line"><span class="comment">#        ssl_session_timeout  10m;</span></span><br><span class="line"><span class="comment">#        ssl_ciphers HIGH:!aNULL:!MD5;</span></span><br><span class="line"><span class="comment">#        ssl_prefer_server_ciphers on;</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#        # Load configuration files for the default server block.</span></span><br><span class="line"><span class="comment">#        include /etc/nginx/default.d/*.conf;</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#        error_page 404 /404.html;</span></span><br><span class="line"><span class="comment">#            location = /40x.html &#123;</span></span><br><span class="line"><span class="comment">#        &#125;</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#        error_page 500 502 503 504 /50x.html;</span></span><br><span class="line"><span class="comment">#            location = /50x.html &#123;</span></span><br><span class="line"><span class="comment">#        &#125;</span></span><br><span class="line"><span class="comment">#    &#125;</span></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>主机ECS-HA1 /usr/share/nginx/html/index.html修改</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Welcome to ECS-HA1</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>备机ECS-HA2 nginx.conf配置</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># For more information on configuration, see:</span></span><br><span class="line"><span class="comment">#   * Official English Documentation: http://nginx.org/en/docs/</span></span><br><span class="line"><span class="comment">#   * Official Russian Documentation: http://nginx.org/ru/docs/</span></span><br><span class="line"></span><br><span class="line"><span class="attribute">user</span> nginx;</span><br><span class="line"><span class="attribute">worker_processes</span> auto;</span><br><span class="line"><span class="attribute">error_log</span> /mnt/sse/log/nginx/error.log;</span><br><span class="line"><span class="attribute">pid</span> /run/nginx.pid;</span><br><span class="line"></span><br><span class="line"><span class="comment"># Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.</span></span><br><span class="line"><span class="attribute">include</span> /usr/share/nginx/modules/<span class="regexp">*.conf</span>;</span><br><span class="line"></span><br><span class="line"><span class="section">events</span> &#123;</span><br><span class="line">    <span class="attribute">worker_connections</span> <span class="number">1024</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="section">http</span> &#123;</span><br><span class="line">    <span class="attribute">log_format</span>  main  <span class="string">'<span class="variable">$status</span> <span class="variable">$body_bytes_sent</span> "<span class="variable">$http_referer</span>" '</span></span><br><span class="line">                      <span class="string">'"<span class="variable">$http_user_agent</span>" "<span class="variable">$http_x_forwarded_for</span>"'</span></span><br><span class="line">                      <span class="string">'"rl=<span class="variable">$request_length</span>" <span class="variable">$remote_addr</span> - <span class="variable">$remote_user</span> [<span class="variable">$time_local</span>] "<span class="variable">$request</span>"'</span></span><br><span class="line">                      <span class="string">'rt=<span class="variable">$request_time</span> uct="<span class="variable">$upstream_connect_time</span>" uht="<span class="variable">$upstream_header_time</span>" urt="<span class="variable">$upstream_response_time</span>"'</span>;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">access_log</span>  /mnt/sse/log/nginx/access.log  main;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">sendfile</span>            <span class="literal">on</span>;</span><br><span class="line">    <span class="attribute">tcp_nopush</span>          <span class="literal">on</span>;</span><br><span class="line">    <span class="attribute">tcp_nodelay</span>         <span class="literal">on</span>;</span><br><span class="line">    <span class="attribute">keepalive_timeout</span>   <span class="number">65</span>;</span><br><span class="line">    <span class="attribute">types_hash_max_size</span> <span class="number">4096</span>;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">include</span>             /etc/nginx/mime.types;</span><br><span class="line">    <span class="attribute">default_type</span>        application/octet-stream;</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Load modular configuration files from the /etc/nginx/conf.d directory.</span></span><br><span class="line">    <span class="comment"># See http://nginx.org/en/docs/ngx_core_module.html#include</span></span><br><span class="line">    <span class="comment"># for more information.</span></span><br><span class="line">    <span class="attribute">include</span> /etc/nginx/conf.d/<span class="regexp">*.conf</span>;</span><br><span class="line"></span><br><span class="line">    <span class="section">server</span> &#123;</span><br><span class="line">        <span class="attribute">listen</span>       <span class="number">80</span>;</span><br><span class="line">        <span class="attribute">listen</span>       [::]:<span class="number">80</span>;</span><br><span class="line">        <span class="attribute">server_name</span>  _;</span><br><span class="line">        <span class="attribute">root</span>         /usr/share/nginx/html;</span><br><span class="line"></span><br><span class="line">        <span class="comment"># Load configuration files for the default server block.</span></span><br><span class="line">        <span class="attribute">include</span> /etc/nginx/default.d/<span class="regexp">*.conf</span>;</span><br><span class="line"></span><br><span class="line">        <span class="attribute">error_page</span> <span class="number">404</span> /<span class="number">404</span>.html;</span><br><span class="line">        <span class="attribute">location</span> = /<span class="number">404</span>.html &#123;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="attribute">error_page</span> <span class="number">500</span> <span class="number">502</span> <span class="number">503</span> <span class="number">504</span> /50x.html;</span><br><span class="line">        <span class="attribute">location</span> = /50x.html &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># Settings for a TLS enabled server.</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#    server &#123;</span></span><br><span class="line"><span class="comment">#        listen       443 ssl http2;</span></span><br><span class="line"><span class="comment">#        listen       [::]:443 ssl http2;</span></span><br><span class="line"><span class="comment">#        server_name  _;</span></span><br><span class="line"><span class="comment">#        root         /usr/share/nginx/html;</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#        ssl_certificate "/etc/pki/nginx/server.crt";</span></span><br><span class="line"><span class="comment">#        ssl_certificate_key "/etc/pki/nginx/private/server.key";</span></span><br><span class="line"><span class="comment">#        ssl_session_cache shared:SSL:1m;</span></span><br><span class="line"><span class="comment">#        ssl_session_timeout  10m;</span></span><br><span class="line"><span class="comment">#        ssl_ciphers HIGH:!aNULL:!MD5;</span></span><br><span class="line"><span class="comment">#        ssl_prefer_server_ciphers on;</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#        # Load configuration files for the default server block.</span></span><br><span class="line"><span class="comment">#        include /etc/nginx/default.d/*.conf;</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#        error_page 404 /404.html;</span></span><br><span class="line"><span class="comment">#            location = /40x.html &#123;</span></span><br><span class="line"><span class="comment">#        &#125;</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#        error_page 500 502 503 504 /50x.html;</span></span><br><span class="line"><span class="comment">#            location = /50x.html &#123;</span></span><br><span class="line"><span class="comment">#        &#125;</span></span><br><span class="line"><span class="comment">#    &#125;</span></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>备机ECS-HA2  /usr/share/nginx/html/index.html修改</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Welcome to ECS-HA2</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h5 id="2-Keepalived"><a href="#2-Keepalived" class="headerlink" title="2. Keepalived"></a>2. Keepalived</h5><h6 id="1-1-在ECS-HA1和ECS-HA2分别安装Keepalived"><a href="#1-1-在ECS-HA1和ECS-HA2分别安装Keepalived" class="headerlink" title="1.1 在ECS-HA1和ECS-HA2分别安装Keepalived"></a>1.1 在ECS-HA1和ECS-HA2分别安装Keepalived</h6><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">$ wget --no-check-certificate https://www.keepalived.org/software/keepalived-2.2.4.tar.gz</span><br><span class="line">$ tar -xvzf keepalived-2.2.4.tar.gz</span><br><span class="line">$ yum -y install openssl-devel</span><br><span class="line">$ <span class="built_in">cd</span> keepalived-2.2.4/</span><br><span class="line">$ ./configure --prefix=/usr/<span class="built_in">local</span>/keepalived</span><br><span class="line">$ make</span><br><span class="line">$ make install</span><br><span class="line">$ mkdir /etc/keepalived</span><br><span class="line">$ cp /usr/<span class="built_in">local</span>/keepalived/etc/keepalived/keepalived.conf /etc/keepalived/keepalived.conf</span><br><span class="line">$ cp /usr/<span class="built_in">local</span>/keepalived/etc/sysconfig/keepalived /etc/sysconfig/keepalived</span><br><span class="line"><span class="comment"># 修改/lib/systemd/system/keepalived.service，设置EnvironmentFile=-/etc/sysconfig/keepalived</span></span><br><span class="line">$ vim /lib/systemd/system/keepalived.service</span><br><span class="line">$ systemctl start keepalived</span><br><span class="line">$ systemctl <span class="built_in">enable</span> keepalived</span><br><span class="line">$ systemctl status keepalived.service</span><br></pre></td></tr></table></figure>
+<h6 id="1-2-配置主机ECS-HA1Keepalived"><a href="#1-2-配置主机ECS-HA1Keepalived" class="headerlink" title="1.2 配置主机ECS-HA1Keepalived"></a>1.2 配置主机ECS-HA1Keepalived</h6><ul>
+<li><p>编辑keepalived.conf</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/keepalived/keepalived.conf</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>修改keepalived.conf</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">! Configuration File for keepalived</span><br><span class="line">global_defs &#123;</span><br><span class="line">    router_id master-node</span><br><span class="line">&#125;</span><br><span class="line">vrrp_script chk_http_port &#123;</span><br><span class="line">    script  "/etc/keepalived/chk_nginx.sh"</span><br><span class="line">    interval 2</span><br><span class="line">    weight -5</span><br><span class="line">    fall 2</span><br><span class="line">    rise 1</span><br><span class="line">&#125;</span><br><span class="line">vrrp_instance VI_1 &#123;</span><br><span class="line">     state MASTER</span><br><span class="line">     interface eth0</span><br><span class="line">     mcast_src_ip 192.168.192.39</span><br><span class="line">     virtual_router_id 51</span><br><span class="line">     priority 101</span><br><span class="line">     advert_int 1</span><br><span class="line">     authentication &#123;</span><br><span class="line">        auth_type PASS</span><br><span class="line">        auth_pass 1111</span><br><span class="line">     &#125;</span><br><span class="line">     unicast_src_ip 192.168.192.39</span><br><span class="line">     virtual_ipaddress &#123;</span><br><span class="line">         192.168.192.100</span><br><span class="line">     &#125;</span><br><span class="line">    notify_master "/etc/keepalived/keepalived_notify.sh MASTER" # 当切换到master状态时执行脚本</span><br><span class="line">    notify_backup "/etc/keepalived/keepalived_notify.sh BACKUP" # 当切换到backup状态时执行脚本</span><br><span class="line">    notify_fault "/etc/keepalived/keepalived_notify.sh FAULT" # 当切换到fault状态时执行脚本</span><br><span class="line">    notify_stop "/etc/keepalived/keepalived_notify.sh STOP" # 当切换到stop状态时执行脚本</span><br><span class="line">    garp_master_delay 1    # 设置当切为主状态后多久更新ARP缓存</span><br><span class="line">    garp_master_refresh 5   # 设置主节点发送ARP报文的时间间隔</span><br><span class="line">    # 跟踪接口，里面任意一块网卡出现问题，都会进入故障(FAULT)状态</span><br><span class="line">    track_interface &#123;</span><br><span class="line">      eth0</span><br><span class="line">    &#125;</span><br><span class="line">     track_script &#123;</span><br><span class="line">         chk_http_port</span><br><span class="line">     &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>创建<code>/etc/keepalived/chk_nginx.sh</code>脚本文件，使用<code>chmod +x /etc/keepalived/chk_nginx.sh</code>将文件变成可执行文件，并增加如下代码</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">counter=$(ps -C nginx --no-heading|wc -l)</span><br><span class="line"><span class="keyword">if</span> [ <span class="string">"<span class="variable">$&#123;counter&#125;</span>"</span> = <span class="string">"0"</span>  ]; <span class="keyword">then</span></span><br><span class="line">     systemctl start nginx.service</span><br><span class="line">     sleep 2</span><br><span class="line">     counter=$(ps -C nginx  --no-heading|wc -l)</span><br><span class="line">     <span class="keyword">if</span> [ <span class="string">"<span class="variable">$&#123;counter&#125;</span>"</span> =  <span class="string">"0"</span> ]; <span class="keyword">then</span></span><br><span class="line">          systemctl stop keepalived.service</span><br><span class="line">     <span class="keyword">fi</span></span><br><span class="line"><span class="keyword">fi</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<ul>
+<li><p>创建<code>/etc/keepalived/keepalived_notify</code>脚本文件，使用<code>chmod +x /etc/keepalived/keepalived_notify</code>将文件变成可执行文件，并增加如下代码</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/usr/bin/env bash</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Copyright 2021 He Chen &lt;chenhe@zuoyejia.com&gt;. All rights reserved.</span></span><br><span class="line"><span class="comment"># Use of this source code is governed by a MIT style</span></span><br><span class="line"><span class="comment"># license that can be found in the LICENSE file.</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># /etc/keepalived/keepalived_notify.sh</span></span><br><span class="line">log_file=/var/<span class="built_in">log</span>/keepalived.log</span><br><span class="line"></span><br><span class="line">sse::keepalived::<span class="function"><span class="title">mail</span></span>() &#123;</span><br><span class="line">  <span class="comment"># 这里可以添加email逻辑，当keepalived变动时及时告警</span></span><br><span class="line">  :</span><br><span class="line"> sendEmail -f chenhe@zuoyejia.com -t chenhe@zuoyejia.com -s <span class="string">"smtp.exmail.qq.com:587"</span> -u <span class="string">"作业家Nginx+Keepalived状态通知"</span> -o message-charset=utf-8 -xu chenhe@zuoyejia.com -xp agcCeRn3v42Cohkk -m <span class="string">"<span class="variable">$1</span>"</span></span><br><span class="line">&#125;</span><br><span class="line">sse::keepalived::<span class="function"><span class="title">log</span></span>() &#123;</span><br><span class="line">    <span class="built_in">echo</span> <span class="string">"[`date '+%Y-%m-%d %T'`] <span class="variable">$1</span>"</span> &gt;&gt; <span class="variable">$&#123;log_file&#125;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">[ ! -d /var/keepalived/ ] &amp;&amp; mkdir -p /var/keepalived/</span><br><span class="line"></span><br><span class="line"><span class="keyword">case</span> <span class="string">"<span class="variable">$1</span>"</span> <span class="keyword">in</span></span><br><span class="line">    <span class="string">"MASTER"</span> )</span><br><span class="line">        sse::keepalived::<span class="built_in">log</span> <span class="string">"notify_master"</span></span><br><span class="line">        sse::keepalived::mail <span class="string">"notify_master"</span></span><br><span class="line">        ;;</span><br><span class="line">    <span class="string">"BACKUP"</span> )</span><br><span class="line">        sse::keepalived::<span class="built_in">log</span> <span class="string">"notify_backup"</span></span><br><span class="line">        sse::keepalived::mail <span class="string">"notify_backup"</span></span><br><span class="line">        ;;</span><br><span class="line">    <span class="string">"FAULT"</span> )</span><br><span class="line">        sse::keepalived::<span class="built_in">log</span> <span class="string">"notify_fault"</span></span><br><span class="line">        sse::keepalived::mail <span class="string">"notify_fault"</span></span><br><span class="line">        ;;</span><br><span class="line">    <span class="string">"STOP"</span> )</span><br><span class="line">        sse::keepalived::<span class="built_in">log</span> <span class="string">"notify_stop"</span></span><br><span class="line">        sse::keepalived::mail <span class="string">"notify_stop"</span></span><br><span class="line">        ;;</span><br><span class="line">    *)</span><br><span class="line">        sse::keepalived::<span class="built_in">log</span> <span class="string">"keepalived_notify.sh: state error!"</span></span><br><span class="line">        ;;</span><br><span class="line"><span class="keyword">esac</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h6 id="1-3-配置备机ECS-HA2-Keepalived"><a href="#1-3-配置备机ECS-HA2-Keepalived" class="headerlink" title="1.3 配置备机ECS-HA2 Keepalived"></a>1.3 配置备机ECS-HA2 Keepalived</h6><ul>
+<li><p>编辑keepalived.conf</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/keepalived/keepalived.conf</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>修改keepalived.conf</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line">! Configuration File for keepalived</span><br><span class="line">global_defs &#123;</span><br><span class="line">    router_id master-node</span><br><span class="line">    script_user root</span><br><span class="line">    enable_script_security</span><br><span class="line">&#125;</span><br><span class="line">vrrp_script chk_http_port &#123;</span><br><span class="line">     script  "/etc/keepalived/chk_nginx.sh"</span><br><span class="line">     interval 2</span><br><span class="line">     weight -5</span><br><span class="line">     fall 2</span><br><span class="line">     rise 1</span><br><span class="line">&#125;</span><br><span class="line">vrrp_instance VI_1 &#123;</span><br><span class="line">     state BACKUP</span><br><span class="line">     interface eth0</span><br><span class="line">     mcast_src_ip 192.168.192.41</span><br><span class="line">     virtual_router_id 51</span><br><span class="line">     priority 100</span><br><span class="line">     advert_int 1</span><br><span class="line">     authentication &#123;</span><br><span class="line">          auth_type PASS</span><br><span class="line">          auth_pass 1111</span><br><span class="line">     &#125;</span><br><span class="line">    unicast_src_ip 192.168.192.41</span><br><span class="line">    virtual_ipaddress &#123;</span><br><span class="line">        192.168.192.100</span><br><span class="line">    &#125;</span><br><span class="line">    notify_master "/etc/keepalived/keepalived_notify.sh MASTER" # 当切换到master状态时执行脚本</span><br><span class="line">    notify_backup "/etc/keepalived/keepalived_notify.sh BACKUP" # 当切换到backup状态时执行脚本</span><br><span class="line">    notify_fault "/etc/keepalived/keepalived_notify.sh FAULT" # 当切换到fault状态时执行脚本</span><br><span class="line">    notify_stop "/etc/keepalived/keepalived_notify.sh STOP" # 当切换到stop状态时执行脚本</span><br><span class="line">    garp_master_delay 1    # 设置当切为主状态后多久更新ARP缓存</span><br><span class="line">    garp_master_refresh 5   # 设置主节点发送ARP报文的时间间隔</span><br><span class="line">    # 跟踪接口，里面任意一块网卡出现问题，都会进入故障(FAULT)状态</span><br><span class="line">    track_interface &#123;</span><br><span class="line">        eth0</span><br><span class="line">    &#125;</span><br><span class="line">    track_script &#123;</span><br><span class="line">        chk_http_port</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>创建<code>/etc/keepalived/chk_nginx.sh</code>脚本文件，使用<code>chmod +x /etc/keepalived/chk_nginx.sh</code>将文件变成可执行文件，并增加如下代码</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">counter=$(ps -C nginx --no-heading|wc -l)</span><br><span class="line"><span class="keyword">if</span> [ <span class="string">"<span class="variable">$&#123;counter&#125;</span>"</span> = <span class="string">"0"</span>  ]; <span class="keyword">then</span></span><br><span class="line">     systemctl start nginx.service</span><br><span class="line">     sleep 2</span><br><span class="line">     counter=$(ps -C nginx  --no-heading|wc -l)</span><br><span class="line">     <span class="keyword">if</span> [ <span class="string">"<span class="variable">$&#123;counter&#125;</span>"</span> =  <span class="string">"0"</span> ]; <span class="keyword">then</span></span><br><span class="line">          systemctl stop keepalived.service</span><br><span class="line">     <span class="keyword">fi</span></span><br><span class="line"><span class="keyword">fi</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<ul>
+<li><p>创建<code>/etc/keepalived/keepalived_notify</code>脚本文件，使用<code>chmod +x /etc/keepalived/keepalived_notify</code>将文件变成可执行文件，并增加如下代码</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/usr/bin/env bash</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Copyright 2021 He Chen &lt;chenhe@zuoyejia.com&gt;. All rights reserved.</span></span><br><span class="line"><span class="comment"># Use of this source code is governed by a MIT style</span></span><br><span class="line"><span class="comment"># license that can be found in the LICENSE file.</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># /etc/keepalived/keepalived_notify.sh</span></span><br><span class="line">log_file=/var/<span class="built_in">log</span>/keepalived.log</span><br><span class="line"></span><br><span class="line">sse::keepalived::<span class="function"><span class="title">mail</span></span>() &#123;</span><br><span class="line">  <span class="comment"># 这里可以添加email逻辑，当keepalived变动时及时告警</span></span><br><span class="line">  :</span><br><span class="line"> sendEmail -f chenhe@zuoyejia.com -t chenhe@zuoyejia.com -s <span class="string">"smtp.exmail.qq.com:587"</span> -u <span class="string">"作业家Nginx+Keepalived备机状态通知"</span> -o message-charset=utf-8 -xu chenhe@zuoyejia.com -xp agcCeRn3v42Cohkk -m <span class="string">"<span class="variable">$1</span>"</span></span><br><span class="line">&#125;</span><br><span class="line">sse::keepalived::<span class="function"><span class="title">log</span></span>() &#123;</span><br><span class="line">    <span class="built_in">echo</span> <span class="string">"[`date '+%Y-%m-%d %T'`] <span class="variable">$1</span>"</span> &gt;&gt; <span class="variable">$&#123;log_file&#125;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">[ ! -d /var/keepalived/ ] &amp;&amp; mkdir -p /var/keepalived/</span><br><span class="line"></span><br><span class="line"><span class="keyword">case</span> <span class="string">"<span class="variable">$1</span>"</span> <span class="keyword">in</span></span><br><span class="line">    <span class="string">"MASTER"</span> )</span><br><span class="line">        sse::keepalived::<span class="built_in">log</span> <span class="string">"nginx backpu notify_master"</span></span><br><span class="line">        sse::keepalived::mail <span class="string">"nginx backpu notify_master"</span></span><br><span class="line">        ;;</span><br><span class="line">    <span class="string">"BACKUP"</span> )</span><br><span class="line">        sse::keepalived::<span class="built_in">log</span> <span class="string">"nginx backpu notify_backup"</span></span><br><span class="line">        sse::keepalived::mail <span class="string">"nginx backpu notify_backup"</span></span><br><span class="line">        ;;</span><br><span class="line">    <span class="string">"FAULT"</span> )</span><br><span class="line">        sse::keepalived::<span class="built_in">log</span> <span class="string">"nginx backpu notify_fault"</span></span><br><span class="line">        sse::keepalived::mail <span class="string">"nginx backpu notify_fault"</span></span><br><span class="line">        ;;</span><br><span class="line">    <span class="string">"STOP"</span> )</span><br><span class="line">        sse::keepalived::<span class="built_in">log</span> <span class="string">"nginx backpu notify_stop"</span></span><br><span class="line">        sse::keepalived::mail <span class="string">"nginx backpu notify_stop"</span></span><br><span class="line">        ;;</span><br><span class="line">    *)</span><br><span class="line">        sse::keepalived::<span class="built_in">log</span> <span class="string">"nginx backpu keepalived_notify.sh: state error!"</span></span><br><span class="line">        ;;</span><br><span class="line"><span class="keyword">esac</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h5 id="3-sendEmail"><a href="#3-sendEmail" class="headerlink" title="3. sendEmail"></a>3. sendEmail</h5><h6 id="1-1-在ECS-HA1和ECS-HA2分别安装sendEmail"><a href="#1-1-在ECS-HA1和ECS-HA2分别安装sendEmail" class="headerlink" title="1.1 在ECS-HA1和ECS-HA2分别安装sendEmail"></a>1.1 在ECS-HA1和ECS-HA2分别安装sendEmail</h6><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install sendEmail</span><br></pre></td></tr></table></figure>
+<h6 id="1-2-以腾讯企业邮箱为例，配置安全密码"><a href="#1-2-以腾讯企业邮箱为例，配置安全密码" class="headerlink" title="1.2. 以腾讯企业邮箱为例，配置安全密码"></a>1.2. 以腾讯企业邮箱为例，配置安全密码</h6><ul>
+<li><p>登录腾讯企业邮箱，打开设置</p>
+<p><img src="https://blob.hixforever.com/20211208142608.png" alt=""></p>
+</li>
+<li><p>选择安全设置，生成专用密码。（如果没开启安全登录，点击开启）<br><img src="https://blob.hixforever.com/20211208142729.png" alt=""></p>
+</li>
+<li><p>将安全密码写入<code>/etc/keepalived/keepalived_notify</code>脚本文件中</p>
+</li>
+</ul>
+<h5 id="4-重启ECS-HA1和ECS-HA2-Nginx、Keepalived"><a href="#4-重启ECS-HA1和ECS-HA2-Nginx、Keepalived" class="headerlink" title="4. 重启ECS-HA1和ECS-HA2 Nginx、Keepalived"></a>4. 重启ECS-HA1和ECS-HA2 Nginx、Keepalived</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> nginx -s reload</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> systemctl restart keepalived</span></span><br></pre></td></tr></table></figure>
+<h5 id="5-绑定虚拟IP"><a href="#5-绑定虚拟IP" class="headerlink" title="5. 绑定虚拟IP"></a>5. 绑定虚拟IP</h5><ol>
+<li>登录管理控制台。</li>
+<li>选择“服务列表 &gt; 网络 &gt; 虚拟私有云”。</li>
+<li>在左侧导航栏选择“子网”。</li>
+<li>在“子网”列表中，单击子网名称。</li>
+<li>选择“IP地址管理”页签，在虚拟IP所在行的操作列下单击“绑定服务器”。</li>
+<li>在弹出的页面，选择ecs HA1和ecs HA2服务器。</li>
+<li>选择“IP地址管理”页签，在虚拟IP所在行的操作列下单击“绑定弹性公网IP”。</li>
+<li>在弹出的页面，选择弹性公网IP <code>116.63.115.186</code></li>
+</ol>
+<h5 id="6-域名解析"><a href="#6-域名解析" class="headerlink" title="6. 域名解析"></a>6. 域名解析</h5><p>添加A类DNS域名解析，将sseserverzj2.zuoyejia.com绑定为上述公网ip</p>
+<h5 id="7-验证结果"><a href="#7-验证结果" class="headerlink" title="7. 验证结果"></a>7. 验证结果</h5><ol>
+<li><p>通过管理控制台远程登录到ecs-HA1。</p>
+</li>
+<li><p>执行以下命令，查看虚拟IP是否有绑定到ecs-HA1的eth0网卡上。<br><strong>ip addr show</strong></p>
+<p>如下图所示表示虚拟IP已经绑定到ecs-HA1的eth0网卡上。<br><img src="https://blob.hixforever.com/20211208143732.png" alt=""></p>
+</li>
+<li><p>访问验证ecs-HA1<br><img src="https://blob.hixforever.com/20211208144326.png" alt=""></p>
+</li>
+<li><p>执行以下命令，停止ecs-HA1上的keepalived服务。<br><strong>systemctl stop keepalived.service</strong></p>
+</li>
+<li><p>执行以下命令，查看服务器ecs-HA2是否有接管虚拟IP。<br><strong>ip addr show</strong><br>如果所示<br><img src="https://blob.hixforever.com/20211208144503.png" alt=""></p>
+</li>
+<li><p>访问验证ecs-HA2<br><img src="https://blob.hixforever.com/20211208144559.png" alt=""></p>
+</li>
+<li><p>查看自己的邮箱是否有keepalived的状态邮件<br><img src="https://blob.hixforever.com/image-20211208144744870.png" alt="image-20211208144744870"></p>
+</li>
+</ol>
+<h4 id="四、常用命令"><a href="#四、常用命令" class="headerlink" title="四、常用命令"></a>四、常用命令</h4><h5 id="Nginx"><a href="#Nginx" class="headerlink" title="Nginx"></a>Nginx</h5><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 不停止对客户服务的情况下，重新加载配置文件</span></span><br><span class="line">nginx -s reload</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/09/07/redis-redis-stream/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -3079,160 +3386,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/08/05/android-runtime-permission/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Henry Ch">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="宁静的世界">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/08/05/android-runtime-permission/" itemprop="url">Android 6.0运行时权限</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-08-05T09:26:00+08:00">
-                2019-08-05
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android/" itemprop="url" rel="index">
-                    <span itemprop="name">Android</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h3 id="Android-6-0运行时权限"><a href="#Android-6-0运行时权限" class="headerlink" title="Android 6.0运行时权限"></a>Android 6.0运行时权限</h3><blockquote>
-<p>Android 6.0这个版本引入了一种新的权限模式———<strong>Runtime Permissions</strong>。用户可以在程序运行时来管理应用程序的权限。在这种模式能够让用户更好的了解和控制权限。</p>
-<p>对于以Android 6.0（API级别23）或更高的版本为目标平台的应用，必须在运行时检查和请求权限。下面具体介绍一下如何在运行时来管理权限。</p>
-</blockquote>
-<h4 id="检查权限"><a href="#检查权限" class="headerlink" title="检查权限"></a>检查权限</h4><p>当应用需要危险权限的时候，每次执行都必须要查自己是否拥有该权限。因为不能保证应用每次使用该功能的时候都具有权限。以下是检测应用是否具有相机的权限。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">int permissionCheck = ContextCompat.checkSelfPermission(thisActivity,</span><br><span class="line">        Manifest.permission.CAMERA);</span><br></pre></td></tr></table></figure>
-<p>如果应用具有该权限，该方法返回<strong>PackageManager.PERMISSION_GRANTED</strong>，并且应用可以继续操作。如果应用不具有此权限，则返回<strong>PERMISSION_DENIED</strong>，此时应用必须向用户请求该权限。</p>
-<h4 id="请求权限"><a href="#请求权限" class="headerlink" title="请求权限"></a>请求权限</h4><p>如果应用没有权限，则需要调用 <code>requestPermissions()</code>方法来请求权限，以下是检测并请求相机的权限代码：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">if (ContextCompat.checkSelfPermission(context,</span><br><span class="line">                Manifest.permission.CAMERA)</span><br><span class="line">        != PackageManager.PERMISSION_GRANTED) &#123;</span><br><span class="line"></span><br><span class="line">    // 如果需要给用户做一些解释，应用之前请求过此权限但用户拒绝了请求，此方法将返回 true。</span><br><span class="line">    if (ActivityCompat.shouldShowRequestPermissionRationale(context,</span><br><span class="line">            Manifest.permission.CAMERA)) &#123;</span><br><span class="line">		//do something</span><br><span class="line">    &#125; else &#123;</span><br><span class="line"></span><br><span class="line">        // 请求相机权限</span><br><span class="line">        ActivityCompat.requestPermissions(context,</span><br><span class="line">                new String[]&#123;Manifest.permission.CAMERA&#125;,</span><br><span class="line">                MY_PERMISSIONS_REQUEST_CAMERA);</span><br><span class="line"></span><br><span class="line">        //MY_PERMISSIONS_REQUEST_CAMERA是我们需要定义请求码</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h4 id="处理请求权限的回调"><a href="#处理请求权限的回调" class="headerlink" title="处理请求权限的回调"></a>处理请求权限的回调</h4><p>当应用请求权限时，系统会向用户显示一个权限对话框，用户做出响应的时候，系统会回调<code>onRequestPermissionsResult()</code> 方法，通过 <code>requestPermissions()</code>方法传递的请求码，来作出相应的回应。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">@Override</span><br><span class="line">public void onRequestPermissionsResult(int requestCode,</span><br><span class="line">        String permissions[], int[] grantResults) &#123;</span><br><span class="line">    switch (requestCode) &#123;</span><br><span class="line">        case MY_PERMISSIONS_REQUEST_CAMERA: &#123;</span><br><span class="line">            // 如果请求被取消，则grantResults数组的长度为0.</span><br><span class="line">            if (grantResults.length &gt; 0</span><br><span class="line">                &amp;&amp; grantResults[0] == PackageManager.PERMISSION_GRANTED) &#123;</span><br><span class="line">			//权限被允许了</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">			//权限被拒绝了                </span><br><span class="line">            &#125;</span><br><span class="line">            return;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h4 id="请求多个权限实例"><a href="#请求多个权限实例" class="headerlink" title="请求多个权限实例"></a>请求多个权限实例</h4><p>写了一个简单的例子供以后复习使用</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line">public class SplashActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback&#123;</span><br><span class="line"></span><br><span class="line">    //定义权限请求码</span><br><span class="line">    public static int PERMISSIONS=2;</span><br><span class="line">    //定义请求权限数组</span><br><span class="line">    public static String[] permissions = new String[] &#123;</span><br><span class="line">            Manifest.permission.READ_EXTERNAL_STORAGE,</span><br><span class="line">            Manifest.permission.WRITE_EXTERNAL_STORAGE,</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    protected void onCreate(@Nullable Bundle savedInstanceState) &#123;</span><br><span class="line">        super.onCreate(savedInstanceState);</span><br><span class="line">        if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.M)&#123;</span><br><span class="line">            requestPermission(SplashActivity.this);</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            Intent intent = new Intent(SplashActivity.this, MainActivity.class);</span><br><span class="line">            startActivity(intent);</span><br><span class="line">            finish();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * 检测需要申请的权限</span><br><span class="line">     * @param permissions</span><br><span class="line">     * @return</span><br><span class="line">     */</span><br><span class="line">    private List&lt;String&gt; getPermissionResult(String[] permissions)&#123;</span><br><span class="line">        List&lt;String&gt; tempList = new ArrayList&lt;String&gt;();</span><br><span class="line">        for (String permission : permissions)&#123;</span><br><span class="line">            if (ActivityCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED)&#123;</span><br><span class="line">                tempList.add(permission);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        return tempList;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * 请求权限</span><br><span class="line">     */</span><br><span class="line">    private void requestPermission(Activity activity)&#123;</span><br><span class="line">        List&lt;String&gt; permissionList = getPermissionResult(permissions);</span><br><span class="line">        if (permissionList.size() != 0)&#123;</span><br><span class="line">            ActivityCompat.requestPermissions(activity, permissionList.toArray(new String[permissionList.size()]), PERMISSIONS);</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            Intent intent = new Intent(SplashActivity.this, MainActivity.class);</span><br><span class="line">            startActivity(intent);</span><br><span class="line">            finish();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) &#123;</span><br><span class="line">        if (requestCode == PERMISSIONS)&#123;</span><br><span class="line">            boolean result = true;</span><br><span class="line">            for (int grantResult : grantResults)&#123;</span><br><span class="line">                if (grantResult == PackageManager.PERMISSION_DENIED)&#123;</span><br><span class="line">                    result=false;</span><br><span class="line">                    break;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            if (!result)&#123;</span><br><span class="line">                Snackbar.make(SplashActivity.this.findViewById(android.R.id.content),&quot;权限被拒绝！重新进入获取权限&quot;, 2000).show();</span><br><span class="line">                finish();</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">                Intent intent = new Intent(SplashActivity.this, MainActivity.class);</span><br><span class="line">                startActivity(intent);</span><br><span class="line">                finish();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            super.onRequestPermissionsResult(requestCode, permissions, grantResults);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -3287,7 +3440,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-count">14</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -3298,7 +3451,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">8</span>
+                  <span class="site-state-item-count">10</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -3309,7 +3462,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">20</span>
+                  <span class="site-state-item-count">21</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
@@ -3346,7 +3499,7 @@
 
     <footer id="footer" class="footer">
       <div class="footer-inner">
-        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
   <span class="with-love">
     <i class="fa fa-user"></i>
   </span>

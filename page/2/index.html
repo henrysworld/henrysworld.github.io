@@ -252,6 +252,160 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/08/05/android-runtime-permission/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/08/05/android-runtime-permission/" itemprop="url">Android 6.0运行时权限</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-08-05T09:26:00+08:00">
+                2019-08-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Android/" itemprop="url" rel="index">
+                    <span itemprop="name">Android</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h3 id="Android-6-0运行时权限"><a href="#Android-6-0运行时权限" class="headerlink" title="Android 6.0运行时权限"></a>Android 6.0运行时权限</h3><blockquote>
+<p>Android 6.0这个版本引入了一种新的权限模式———<strong>Runtime Permissions</strong>。用户可以在程序运行时来管理应用程序的权限。在这种模式能够让用户更好的了解和控制权限。</p>
+<p>对于以Android 6.0（API级别23）或更高的版本为目标平台的应用，必须在运行时检查和请求权限。下面具体介绍一下如何在运行时来管理权限。</p>
+</blockquote>
+<h4 id="检查权限"><a href="#检查权限" class="headerlink" title="检查权限"></a>检查权限</h4><p>当应用需要危险权限的时候，每次执行都必须要查自己是否拥有该权限。因为不能保证应用每次使用该功能的时候都具有权限。以下是检测应用是否具有相机的权限。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">int permissionCheck = ContextCompat.checkSelfPermission(thisActivity,</span><br><span class="line">        Manifest.permission.CAMERA);</span><br></pre></td></tr></table></figure>
+<p>如果应用具有该权限，该方法返回<strong>PackageManager.PERMISSION_GRANTED</strong>，并且应用可以继续操作。如果应用不具有此权限，则返回<strong>PERMISSION_DENIED</strong>，此时应用必须向用户请求该权限。</p>
+<h4 id="请求权限"><a href="#请求权限" class="headerlink" title="请求权限"></a>请求权限</h4><p>如果应用没有权限，则需要调用 <code>requestPermissions()</code>方法来请求权限，以下是检测并请求相机的权限代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">if (ContextCompat.checkSelfPermission(context,</span><br><span class="line">                Manifest.permission.CAMERA)</span><br><span class="line">        != PackageManager.PERMISSION_GRANTED) &#123;</span><br><span class="line"></span><br><span class="line">    // 如果需要给用户做一些解释，应用之前请求过此权限但用户拒绝了请求，此方法将返回 true。</span><br><span class="line">    if (ActivityCompat.shouldShowRequestPermissionRationale(context,</span><br><span class="line">            Manifest.permission.CAMERA)) &#123;</span><br><span class="line">		//do something</span><br><span class="line">    &#125; else &#123;</span><br><span class="line"></span><br><span class="line">        // 请求相机权限</span><br><span class="line">        ActivityCompat.requestPermissions(context,</span><br><span class="line">                new String[]&#123;Manifest.permission.CAMERA&#125;,</span><br><span class="line">                MY_PERMISSIONS_REQUEST_CAMERA);</span><br><span class="line"></span><br><span class="line">        //MY_PERMISSIONS_REQUEST_CAMERA是我们需要定义请求码</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="处理请求权限的回调"><a href="#处理请求权限的回调" class="headerlink" title="处理请求权限的回调"></a>处理请求权限的回调</h4><p>当应用请求权限时，系统会向用户显示一个权限对话框，用户做出响应的时候，系统会回调<code>onRequestPermissionsResult()</code> 方法，通过 <code>requestPermissions()</code>方法传递的请求码，来作出相应的回应。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">@Override</span><br><span class="line">public void onRequestPermissionsResult(int requestCode,</span><br><span class="line">        String permissions[], int[] grantResults) &#123;</span><br><span class="line">    switch (requestCode) &#123;</span><br><span class="line">        case MY_PERMISSIONS_REQUEST_CAMERA: &#123;</span><br><span class="line">            // 如果请求被取消，则grantResults数组的长度为0.</span><br><span class="line">            if (grantResults.length &gt; 0</span><br><span class="line">                &amp;&amp; grantResults[0] == PackageManager.PERMISSION_GRANTED) &#123;</span><br><span class="line">			//权限被允许了</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">			//权限被拒绝了                </span><br><span class="line">            &#125;</span><br><span class="line">            return;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="请求多个权限实例"><a href="#请求多个权限实例" class="headerlink" title="请求多个权限实例"></a>请求多个权限实例</h4><p>写了一个简单的例子供以后复习使用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line">public class SplashActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback&#123;</span><br><span class="line"></span><br><span class="line">    //定义权限请求码</span><br><span class="line">    public static int PERMISSIONS=2;</span><br><span class="line">    //定义请求权限数组</span><br><span class="line">    public static String[] permissions = new String[] &#123;</span><br><span class="line">            Manifest.permission.READ_EXTERNAL_STORAGE,</span><br><span class="line">            Manifest.permission.WRITE_EXTERNAL_STORAGE,</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    protected void onCreate(@Nullable Bundle savedInstanceState) &#123;</span><br><span class="line">        super.onCreate(savedInstanceState);</span><br><span class="line">        if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.M)&#123;</span><br><span class="line">            requestPermission(SplashActivity.this);</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            Intent intent = new Intent(SplashActivity.this, MainActivity.class);</span><br><span class="line">            startActivity(intent);</span><br><span class="line">            finish();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * 检测需要申请的权限</span><br><span class="line">     * @param permissions</span><br><span class="line">     * @return</span><br><span class="line">     */</span><br><span class="line">    private List&lt;String&gt; getPermissionResult(String[] permissions)&#123;</span><br><span class="line">        List&lt;String&gt; tempList = new ArrayList&lt;String&gt;();</span><br><span class="line">        for (String permission : permissions)&#123;</span><br><span class="line">            if (ActivityCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED)&#123;</span><br><span class="line">                tempList.add(permission);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        return tempList;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * 请求权限</span><br><span class="line">     */</span><br><span class="line">    private void requestPermission(Activity activity)&#123;</span><br><span class="line">        List&lt;String&gt; permissionList = getPermissionResult(permissions);</span><br><span class="line">        if (permissionList.size() != 0)&#123;</span><br><span class="line">            ActivityCompat.requestPermissions(activity, permissionList.toArray(new String[permissionList.size()]), PERMISSIONS);</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            Intent intent = new Intent(SplashActivity.this, MainActivity.class);</span><br><span class="line">            startActivity(intent);</span><br><span class="line">            finish();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) &#123;</span><br><span class="line">        if (requestCode == PERMISSIONS)&#123;</span><br><span class="line">            boolean result = true;</span><br><span class="line">            for (int grantResult : grantResults)&#123;</span><br><span class="line">                if (grantResult == PackageManager.PERMISSION_DENIED)&#123;</span><br><span class="line">                    result=false;</span><br><span class="line">                    break;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            if (!result)&#123;</span><br><span class="line">                Snackbar.make(SplashActivity.this.findViewById(android.R.id.content),&quot;权限被拒绝！重新进入获取权限&quot;, 2000).show();</span><br><span class="line">                finish();</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">                Intent intent = new Intent(SplashActivity.this, MainActivity.class);</span><br><span class="line">                startActivity(intent);</span><br><span class="line">                finish();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            super.onRequestPermissionsResult(requestCode, permissions, grantResults);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/08/04/mysql-performance-analysis-explain/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1002,7 +1156,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-count">14</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -1013,7 +1167,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">8</span>
+                  <span class="site-state-item-count">10</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -1024,7 +1178,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">20</span>
+                  <span class="site-state-item-count">21</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
@@ -1061,7 +1215,7 @@
 
     <footer id="footer" class="footer">
       <div class="footer-inner">
-        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
   <span class="with-love">
     <i class="fa fa-user"></i>
   </span>
