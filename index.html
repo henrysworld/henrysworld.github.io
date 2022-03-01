@@ -423,21 +423,21 @@
 </ul>
 </li>
 </ol>
-<pre><code>* 使用curl访问7000端口查看哪个Pod正常返回
+<pre><code>- 使用curl访问7000端口查看哪个Pod正常返回
 
     <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl 10.244.8.83:7000</span><br><span class="line">curl 10.244.68.188:7000</span><br></pre></td></tr></table></figure>
 
     ![](https://blob.hixforever.com/image-20220129154540460.png)
 
 
-* 查看这两个pod的lables信息，并找到ceph_daemon_id信息
+- 查看这两个pod的lables信息，并找到ceph_daemon_id信息
 
     <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl get pod -n rook-ceph --show-labels</span><br></pre></td></tr></table></figure>
 
     ![](https://blob.hixforever.com/image-20220129154825543.png)
 
 
-* 修改dashboard-external-http.yaml文件。在selector中加上可用Pod的ceph_daemon_id
+- 修改dashboard-external-http.yaml文件。在selector中加上可用Pod的ceph_daemon_id
 
     <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">selector:</span></span><br><span class="line">            <span class="attr">app:</span> <span class="string">rook-ceph-mgr</span></span><br><span class="line">            <span class="attr">ceph_daemon_id:</span> <span class="string">a</span></span><br><span class="line">            <span class="attr">rook_cluster:</span> <span class="string">rook-ceph</span></span><br></pre></td></tr></table></figure>
 
