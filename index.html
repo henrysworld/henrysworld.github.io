@@ -380,7 +380,7 @@
  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">ROOK_CSI_CEPH_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/cephcsi@sha256:19634b6ef9fc6df2902cf6ff0b3dbccc56a6663d0cbfd065da44ecd2f955d848"</span></span><br><span class="line"><span class="attr">ROOK_CSI_REGISTRAR_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-node-driver-registrar@sha256:01b341312ea19cefc29f46fa0dd54255530b9039dd80834f50d582ecd93cc3ca"</span></span><br><span class="line"><span class="attr">ROOK_CSI_RESIZER_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-resizer@sha256:d2d2e429a0a87190ee73462698a02a08e555055246ad87ad979b464b999fedae"</span></span><br><span class="line"><span class="attr">ROOK_CSI_PROVISIONER_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-provisioner@sha256:bbae7cde811054f6a51060ba7a42d8bf2469b8c574abb50fec8b46c13e32541e"</span></span><br><span class="line"><span class="attr">ROOK_CSI_SNAPSHOTTER_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-snapshotter@sha256:551b9692943f915b5ee4b7274e3a918692a6175bb028f1f0236a38596c46cbe0"</span></span><br><span class="line"><span class="attr">ROOK_CSI_ATTACHER_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-attacher@sha256:221c1c6930fb1cb93b57762a74ccb59194c4c74a63c0fd49309d1158d4f8c72c"</span></span><br></pre></td></tr></table></figure>
 </li>
 </ol>
-<pre><code>![https://blob.hixforever.com/image-20220129150501500.png](https://blob.hixforever.com/image-20220129150501500.png)
+<pre><code>![](https://blob.hixforever.com/image-20220129150501500.png)
 </code></pre><ol start="3">
 <li><p>修改cluster.yaml文件（主要修改镜像地址、mon数量、mgr数量、dashboard的ssl）</p>
 <ul>
@@ -392,7 +392,7 @@
 </ul>
 </li>
 </ol>
-<pre><code>![https://blob.hixforever.com/image-20220129150923306.png](https://blob.hixforever.com/image-20220129150923306.png)
+<pre><code>![](https://blob.hixforever.com/image-20220129150923306.png)
 </code></pre><ol start="4">
 <li><p>部署Rook Operator</p>
  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> rook/deploy/examples</span><br><span class="line">kubectl apply -f crds.yaml -f common.yaml -f operator.yaml</span><br></pre></td></tr></table></figure>
@@ -408,7 +408,7 @@
  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl -n rook-ceph get pod</span><br></pre></td></tr></table></figure>
 </li>
 </ol>
-<pre><code>![https://blob.hixforever.com/image-20220129151854831.png](https://blob.hixforever.com/image-20220129151854831.png)
+<pre><code>![](https://blob.hixforever.com/image-20220129151854831.png)
 </code></pre><h2 id="二、搭建Ceph-Dashboard面板"><a href="#二、搭建Ceph-Dashboard面板" class="headerlink" title="二、搭建Ceph Dashboard面板"></a><strong>二、搭建Ceph Dashboard面板</strong></h2><ol>
 <li><p>配置在集群外部查看Dashboard。这里我们使用service http的NodePort模式。这个时候我们会发现Dashboard并不可以访问，解决办法看2</p>
  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> rook/deploy/examples</span><br><span class="line">kubectl create -f dashboard-external-http.yaml</span><br></pre></td></tr></table></figure>
@@ -428,28 +428,28 @@
     <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl -n rook-ceph get pod -owide</span><br></pre></td></tr></table></figure>
 
 
-    ![https://blob.hixforever.com/image-20220129154431024.png](https://blob.hixforever.com/image-20220129154431024.png)
+    ![](https://blob.hixforever.com/image-20220129154431024.png)
 
 - 使用curl访问7000端口查看哪个Pod正常返回
 
     <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ curl 10.244.8.83:7000</span><br><span class="line">$ curl 10.244.68.188:7000</span><br></pre></td></tr></table></figure>
 
 
-    ![https://blob.hixforever.com/image-20220129154540460.png](https://blob.hixforever.com/image-20220129154540460.png)
+    ![](https://blob.hixforever.com/image-20220129154540460.png)
 
 - 查看这两个pod的lables信息，并找到ceph_daemon_id信息
 
     <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl get pod -n rook-ceph --show-labels</span><br></pre></td></tr></table></figure>
 
 
-    ![https://blob.hixforever.com/image-20220129154825543.png](https://blob.hixforever.com/image-20220129154825543.png)
+    ![](https://blob.hixforever.com/image-20220129154825543.png)
 
 - 修改dashboard-external-http.yaml文件。在selector中加上可用Pod的ceph_daemon_id
 
     <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">selector:</span></span><br><span class="line">            <span class="attr">app:</span> <span class="string">rook-ceph-mgr</span></span><br><span class="line">            <span class="attr">ceph_daemon_id:</span> <span class="string">a</span></span><br><span class="line">            <span class="attr">rook_cluster:</span> <span class="string">rook-ceph</span></span><br></pre></td></tr></table></figure>
 
 
-    ![https://blob.hixforever.com/image-20220129155034381.png](https://blob.hixforever.com/image-20220129155034381.png)
+    ![](https://blob.hixforever.com/image-20220129155034381.png)
 </code></pre><ol start="3">
 <li><p>重新加载dashboard-external-http.yaml service。这次发现使用公网ip+Nodeport可以正常访问Dashboard</p>
  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f dashboard-external-http.yaml</span><br></pre></td></tr></table></figure>
