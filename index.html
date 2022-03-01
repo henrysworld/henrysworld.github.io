@@ -380,8 +380,6 @@
  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">ROOK_CSI_CEPH_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/cephcsi@sha256:19634b6ef9fc6df2902cf6ff0b3dbccc56a6663d0cbfd065da44ecd2f955d848"</span></span><br><span class="line"><span class="attr">ROOK_CSI_REGISTRAR_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-node-driver-registrar@sha256:01b341312ea19cefc29f46fa0dd54255530b9039dd80834f50d582ecd93cc3ca"</span></span><br><span class="line"><span class="attr">ROOK_CSI_RESIZER_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-resizer@sha256:d2d2e429a0a87190ee73462698a02a08e555055246ad87ad979b464b999fedae"</span></span><br><span class="line"><span class="attr">ROOK_CSI_PROVISIONER_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-provisioner@sha256:bbae7cde811054f6a51060ba7a42d8bf2469b8c574abb50fec8b46c13e32541e"</span></span><br><span class="line"><span class="attr">ROOK_CSI_SNAPSHOTTER_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-snapshotter@sha256:551b9692943f915b5ee4b7274e3a918692a6175bb028f1f0236a38596c46cbe0"</span></span><br><span class="line"><span class="attr">ROOK_CSI_ATTACHER_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-attacher@sha256:221c1c6930fb1cb93b57762a74ccb59194c4c74a63c0fd49309d1158d4f8c72c"</span></span><br></pre></td></tr></table></figure>
 <p> <img src="https://blob.hixforever.com/image-20220129150501500.png" alt=""></p>
 </li>
-</ol>
-<ol start="3">
 <li><p>修改cluster.yaml文件（主要修改镜像地址、mon数量、mgr数量、dashboard的ssl）</p>
 <ul>
 <li>mgr数量：Ceph集群需要可用，所以最好配置为2（这里有个深坑这里的高可用是主备模式，在配置dashboard的时候需要注意）</li>
@@ -420,16 +418,13 @@
 <li><p>找到第一步查看上面的svc。我们看到pod所在的端口(targetPort)是7000</p>
   <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"><span class="attr">  name:</span> <span class="string">rook-ceph-mgr-dashboard-external-http</span></span><br><span class="line"><span class="attr">  namespace:</span> <span class="string">rook-ceph</span> <span class="comment"># namespace:cluster</span></span><br><span class="line"><span class="attr">  labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">rook-ceph-mgr</span></span><br><span class="line">    <span class="attr">rook_cluster:</span> <span class="string">rook-ceph</span> <span class="comment"># namespace:cluster</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line"><span class="attr">  ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">dashboard</span></span><br><span class="line">      <span class="attr">port:</span> <span class="number">7000</span></span><br><span class="line">      <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">      <span class="attr">targetPort:</span> <span class="number">7000</span></span><br><span class="line"><span class="attr">  selector:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">rook-ceph-mgr</span></span><br><span class="line">    <span class="attr">ceph_daemon_id:</span> <span class="string">a</span></span><br><span class="line">    <span class="attr">rook_cluster:</span> <span class="string">rook-ceph</span></span><br><span class="line"><span class="attr">  sessionAffinity:</span> <span class="string">None</span></span><br><span class="line"><span class="attr">  type:</span> <span class="string">NodePort</span></span><br></pre></td></tr></table></figure>
 </li>
+<li><p>找到mgr的两个podIP地址</p>
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl -n rook-ceph get pod -owide</span><br></pre></td></tr></table></figure>
+</li>
 </ul>
 </li>
 </ol>
-<pre><code>- 找到mgr的两个podIP地址
-
-    <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl -n rook-ceph get pod -owide</span><br></pre></td></tr></table></figure>
-
-
-    ![](https://blob.hixforever.com/image-20220129154431024.png)
-
+<pre><code>    ![](https://blob.hixforever.com/image-20220129154431024.png)
 
 - 使用curl访问7000端口查看哪个Pod正常返回
 
@@ -438,14 +433,12 @@
 
     ![](https://blob.hixforever.com/image-20220129154540460.png)
 
-
 - 查看这两个pod的lables信息，并找到ceph_daemon_id信息
 
     <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl get pod -n rook-ceph --show-labels</span><br></pre></td></tr></table></figure>
 
 
     ![](https://blob.hixforever.com/image-20220129154825543.png)
-
 
 - 修改dashboard-external-http.yaml文件。在selector中加上可用Pod的ceph_daemon_id
 
