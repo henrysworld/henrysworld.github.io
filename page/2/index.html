@@ -252,6 +252,192 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/11/28/data-structure-algorithm-01/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/11/28/data-structure-algorithm-01/" itemprop="url">算法复杂度分析</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-11-28T18:57:15+08:00">
+                2019-11-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/算法、数据结构/" itemprop="url" rel="index">
+                    <span itemprop="name">算法、数据结构</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h3 id="事后统计法"><a href="#事后统计法" class="headerlink" title="事后统计法"></a>事后统计法</h3><p>事后统计法是指把需要的统计代码跑一遍，通过统计、监控，就能得到算法执行的时间和占用的内存大小。这种统计方法非常有局限性。</p>
+<h4 id="事后统计法局限性"><a href="#事后统计法局限性" class="headerlink" title="事后统计法局限性"></a>事后统计法局限性</h4><ol>
+<li>测试结果非常依赖测试环境</li>
+<li>测试结果受数据规模的影响很大</li>
+</ol>
+<h3 id="大O复杂度表示法"><a href="#大O复杂度表示法" class="headerlink" title="大O复杂度表示法"></a>大O复杂度表示法</h3><p><strong>所有代码的执行时间 T(n) 与每行代码的执行次数 n 成正比。</strong></p>
+<p><strong><em>T(n) = O(f(n))</em></strong></p>
+<ul>
+<li>T(n) 它表示代码执行的时间；</li>
+<li>n 表示数据规模的大小；</li>
+<li>f(n) 表示每行代码执行的次数总和。因为这是一个公式，所以用 f(n) 来表示。</li>
+<li>公式中的 O，表示代码的执行时间 T(n) 与 f(n) 表达式成正比。</li>
+</ul>
+<h3 id="时间复杂度分析"><a href="#时间复杂度分析" class="headerlink" title="时间复杂度分析"></a>时间复杂度分析</h3><p>在分析时间复杂度的时候比较实用的方法有下面几个：</p>
+<ol>
+<li><p>只关注循环执行次数最多的一段代码</p>
+</li>
+<li><p>加法法则：总复杂度等于量级最大的那段代码的复杂度</p>
+</li>
+<li><p>乘法法则：嵌套代码的复杂度等于嵌套内外代码复杂度的乘积</p>
+</li>
+</ol>
+<h3 id="几种常见的时间复杂度"><a href="#几种常见的时间复杂度" class="headerlink" title="几种常见的时间复杂度"></a>几种常见的时间复杂度</h3><p>常见的时间复杂度从低阶到高阶分别为：</p>
+<ol>
+<li>常量阶：O(1)</li>
+<li>对数阶：O(logn)</li>
+<li>线性阶：O(n)</li>
+<li>线性对数阶：O(nlogn)</li>
+<li>平方阶：O($n^2$)</li>
+<li>指数阶：O($2^n$)</li>
+<li>阶乘阶：O(n!)</li>
+</ol>
+<h3 id="最好、最坏情况时间复杂度"><a href="#最好、最坏情况时间复杂度" class="headerlink" title="最好、最坏情况时间复杂度"></a>最好、最坏情况时间复杂度</h3><p>下面看如下代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">// n表示数组array的长度</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">find</span><span class="params">(<span class="keyword">int</span>[] array, <span class="keyword">int</span> n, <span class="keyword">int</span> x)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> i = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">int</span> pos = -<span class="number">1</span>;</span><br><span class="line">  <span class="keyword">for</span> (; i &lt; n; ++i) &#123;</span><br><span class="line">    <span class="keyword">if</span> (array[i] == x) &#123;</span><br><span class="line">       pos = i;</span><br><span class="line">       <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> pos;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>最好情况时间复杂度就是，在最理想的情况下，执行这段代码的时间复杂度，即上面循环只遍历一次就得到结果。</li>
+<li>最坏情况时间复杂度就是，在最糟糕的情况下，执行这段代码的时间复杂度，即上面循环把整个数组都遍历一遍</li>
+</ul>
+<h3 id="平均情况时间复杂度"><a href="#平均情况时间复杂度" class="headerlink" title="平均情况时间复杂度"></a>平均情况时间复杂度</h3><ul>
+<li>平均情况时间复杂度分析，可以先算出该段代码的加权平均值之后再来分析。</li>
+</ul>
+<h3 id="均摊时间复杂度"><a href="#均摊时间复杂度" class="headerlink" title="均摊时间复杂度"></a>均摊时间复杂度</h3><ul>
+<li>出现O(1)的次数远大于出现O(n)出现的次数，那么平均平摊时间复杂度就是O(1)</li>
+</ul>
+<h3 id="空间复杂度"><a href="#空间复杂度" class="headerlink" title="空间复杂度"></a>空间复杂度</h3><p>空间复杂度分析可以参考时间复杂度分析。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/08/05/android-runtime-permission/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1156,7 +1342,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">14</span>
+                  <span class="site-state-item-count">15</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -1167,7 +1353,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-count">13</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -1178,7 +1364,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">21</span>
+                  <span class="site-state-item-count">24</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>

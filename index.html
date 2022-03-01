@@ -252,6 +252,313 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2022/03/01/k8s-rook-ceph-install/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Henry Ch">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静的世界">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/03/01/k8s-rook-ceph-install/" itemprop="url">搭建Rook Ceph存储集群</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-03-01T17:39:41+08:00">
+                2022-03-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">Kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/Rook/" itemprop="url" rel="index">
+                    <span itemprop="name">Rook</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/Rook/Ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">Ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="搭建rook-ceph存储集群"><a href="#搭建rook-ceph存储集群" class="headerlink" title="搭建rook ceph存储集群"></a><strong>搭建rook ceph存储集群</strong></h1><h2 id="一、安装Rook集群"><a href="#一、安装Rook集群" class="headerlink" title="一、安装Rook集群"></a><strong>一、安装Rook集群</strong></h2><blockquote>
+<p><a href="https://www.rook.io/docs/rook/v1.8/quickstart.html" target="_blank" rel="noopener">https://www.rook.io/docs/rook/v1.8/quickstart.html</a></p>
+</blockquote>
+<ol>
+<li><p>下载代码</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --single-branch --branch v1.8.3 https://github.com/rook/rook.git</span><br><span class="line"><span class="built_in">cd</span> rook/deploy/examples</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="2">
+<li><p>修改operator.yaml文件（主要是修改镜像文件下载地址，无法直接在国内网络环境下从k8s.gcr.io下载镜像，最好使用翻墙工具在自己电脑上下好镜像然后在生产服务器上直接使用）。如下图所示：</p>
+ <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">ROOK_CSI_CEPH_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/cephcsi@sha256:19634b6ef9fc6df2902cf6ff0b3dbccc56a6663d0cbfd065da44ecd2f955d848"</span></span><br><span class="line"><span class="attr">ROOK_CSI_REGISTRAR_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-node-driver-registrar@sha256:01b341312ea19cefc29f46fa0dd54255530b9039dd80834f50d582ecd93cc3ca"</span></span><br><span class="line"><span class="attr">ROOK_CSI_RESIZER_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-resizer@sha256:d2d2e429a0a87190ee73462698a02a08e555055246ad87ad979b464b999fedae"</span></span><br><span class="line"><span class="attr">ROOK_CSI_PROVISIONER_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-provisioner@sha256:bbae7cde811054f6a51060ba7a42d8bf2469b8c574abb50fec8b46c13e32541e"</span></span><br><span class="line"><span class="attr">ROOK_CSI_SNAPSHOTTER_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-snapshotter@sha256:551b9692943f915b5ee4b7274e3a918692a6175bb028f1f0236a38596c46cbe0"</span></span><br><span class="line"><span class="attr">ROOK_CSI_ATTACHER_IMAGE:</span> <span class="string">"testharbor.zuoyejia.com/k8s_image/csi-attacher@sha256:221c1c6930fb1cb93b57762a74ccb59194c4c74a63c0fd49309d1158d4f8c72c"</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<pre><code>![https://blob.hixforever.com/image-20220129150501500.png](https://blob.hixforever.com/image-20220129150501500.png)
+</code></pre><ol start="3">
+<li><p>修改cluster.yaml文件（主要修改镜像地址、mon数量、mgr数量、dashboard的ssl）</p>
+<ul>
+<li>mgr数量：Ceph集群需要可用，所以最好配置为2（这里有个深坑这里的高可用是主备模式，在配置dashboard的时候需要注意）</li>
+<li><p>dashboard的ssl：修改这个是因为我们使用ingress的方式，并且在ingress的前面还有一层是华为云的ELB（华为云的ELB不支持后端协议为tcp，所以这里只能将dashboard的ssl关掉，在ELB层配置https），</p>
+<p>如下图所示：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">mon:</span></span><br><span class="line">        <span class="comment"># Set the number of mons to be started. Generally recommended to be 3.</span></span><br><span class="line">        <span class="comment"># For highest availability, an odd number of mons should be specified.</span></span><br><span class="line">        <span class="attr">count:</span> <span class="number">3</span></span><br><span class="line">        <span class="comment"># The mons should be on unique nodes. For production, at least 3 nodes are recommended for this reason.</span></span><br><span class="line">        <span class="comment"># Mons should only be allowed on the same node for test environments where data loss is acceptable.</span></span><br><span class="line">        <span class="attr">allowMultiplePerNode:</span> <span class="literal">false</span></span><br><span class="line"><span class="attr">mgr:</span></span><br><span class="line">        <span class="comment"># When higher availability of the mgr is needed, increase the count to 2.</span></span><br><span class="line">        <span class="comment"># In that case, one mgr will be active and one in standby. When Ceph updates which</span></span><br><span class="line">        <span class="comment"># mgr is active, Rook will update the mgr services to match the active mgr.</span></span><br><span class="line">        <span class="attr">count:</span> <span class="number">2</span></span><br><span class="line">        <span class="attr">modules:</span></span><br><span class="line">          <span class="comment"># Several modules should not need to be included in this list. The "dashboard" and "monitoring" modules</span></span><br><span class="line">          <span class="comment"># are already enabled by other settings in the cluster CR.</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">pg_autoscaler</span></span><br><span class="line">            <span class="attr">enabled:</span> <span class="literal">true</span></span><br><span class="line">      <span class="comment"># enable the ceph dashboard for viewing cluster status</span></span><br><span class="line"><span class="attr">dashboard:</span></span><br><span class="line">        <span class="attr">enabled:</span> <span class="literal">true</span></span><br><span class="line">        <span class="comment"># serve the dashboard under a subpath (useful when you are accessing the dashboard via a reverse proxy)</span></span><br><span class="line">        <span class="comment"># urlPrefix: /ceph-dashboard</span></span><br><span class="line">        <span class="comment"># serve the dashboard at the given port.</span></span><br><span class="line">        <span class="comment"># port: 8443</span></span><br><span class="line">        <span class="comment"># serve the dashboard using SSL</span></span><br><span class="line">        <span class="comment"># ssl: true</span></span><br><span class="line">      <span class="comment"># enable prometheus alerting for cluster</span></span><br><span class="line"><span class="attr">monitoring:</span></span><br><span class="line">        <span class="comment"># requires Prometheus to be pre-installed</span></span><br><span class="line">        <span class="attr">enabled:</span> <span class="literal">false</span></span><br><span class="line">        <span class="comment"># namespace to deploy prometheusRule in. If empty, namespace of the cluster will be used.</span></span><br><span class="line">        <span class="comment"># Recommended:</span></span><br><span class="line">        <span class="comment"># If you have a single rook-ceph cluster, set the rulesNamespace to the same namespace as the cluster or keep it empty.</span></span><br><span class="line">        <span class="comment"># If you have multiple rook-ceph clusters in the same k8s cluster, choose the same namespace (ideally, namespace with prometheus</span></span><br><span class="line">        <span class="comment"># deployed) to set rulesNamespace for all the clusters. Otherwise, you will get duplicate alerts with multiple alert definitions.</span></span><br><span class="line">        <span class="attr">rulesNamespace:</span> <span class="string">rook-ceph</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+</ol>
+<pre><code>![https://blob.hixforever.com/image-20220129150923306.png](https://blob.hixforever.com/image-20220129150923306.png)
+</code></pre><ol start="4">
+<li><p>部署Rook Operator</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> rook/deploy/examples</span><br><span class="line">kubectl apply -f crds.yaml -f common.yaml -f operator.yaml</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="5">
+<li><p>创建Ceph集群</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f cluster.yaml</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="6">
+<li><p>检测Ceph集群是否正常。如下图所示</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl -n rook-ceph get pod</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<pre><code>![https://blob.hixforever.com/image-20220129151854831.png](https://blob.hixforever.com/image-20220129151854831.png)
+</code></pre><h2 id="二、搭建Ceph-Dashboard面板"><a href="#二、搭建Ceph-Dashboard面板" class="headerlink" title="二、搭建Ceph Dashboard面板"></a><strong>二、搭建Ceph Dashboard面板</strong></h2><ol>
+<li><p>配置在集群外部查看Dashboard。这里我们使用service http的NodePort模式。这个时候我们会发现Dashboard并不可以访问，解决办法看2</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> rook/deploy/examples</span><br><span class="line">kubectl create -f dashboard-external-http.yaml</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="2">
+<li><p>检测mgr主备高可用模式下哪个pod真正能用<br>由于主备模式下有一个Pod是不能用的，所以在配置service的时候可能代理的mgr pod不能用，所以导致Dashboard不能访问。</p>
+<ul>
+<li><p>找到第一步查看上面的svc。我们看到pod所在的端口(targetPort)是7000</p>
+  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"><span class="attr">  name:</span> <span class="string">rook-ceph-mgr-dashboard-external-http</span></span><br><span class="line"><span class="attr">  namespace:</span> <span class="string">rook-ceph</span> <span class="comment"># namespace:cluster</span></span><br><span class="line"><span class="attr">  labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">rook-ceph-mgr</span></span><br><span class="line">    <span class="attr">rook_cluster:</span> <span class="string">rook-ceph</span> <span class="comment"># namespace:cluster</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line"><span class="attr">  ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">dashboard</span></span><br><span class="line">      <span class="attr">port:</span> <span class="number">7000</span></span><br><span class="line">      <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">      <span class="attr">targetPort:</span> <span class="number">7000</span></span><br><span class="line"><span class="attr">  selector:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">rook-ceph-mgr</span></span><br><span class="line">    <span class="attr">ceph_daemon_id:</span> <span class="string">a</span></span><br><span class="line">    <span class="attr">rook_cluster:</span> <span class="string">rook-ceph</span></span><br><span class="line"><span class="attr">  sessionAffinity:</span> <span class="string">None</span></span><br><span class="line"><span class="attr">  type:</span> <span class="string">NodePort</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+</ol>
+<pre><code>- 找到mgr的两个podIP地址
+
+    <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl -n rook-ceph get pod -owide</span><br></pre></td></tr></table></figure>
+
+
+    ![https://blob.hixforever.com/image-20220129154431024.png](https://blob.hixforever.com/image-20220129154431024.png)
+
+- 使用curl访问7000端口查看哪个Pod正常返回
+
+    <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ curl 10.244.8.83:7000</span><br><span class="line">$ curl 10.244.68.188:7000</span><br></pre></td></tr></table></figure>
+
+
+    ![https://blob.hixforever.com/image-20220129154540460.png](https://blob.hixforever.com/image-20220129154540460.png)
+
+- 查看这两个pod的lables信息，并找到ceph_daemon_id信息
+
+    <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl get pod -n rook-ceph --show-labels</span><br></pre></td></tr></table></figure>
+
+
+    ![https://blob.hixforever.com/image-20220129154825543.png](https://blob.hixforever.com/image-20220129154825543.png)
+
+- 修改dashboard-external-http.yaml文件。在selector中加上可用Pod的ceph_daemon_id
+
+    <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">selector:</span></span><br><span class="line">            <span class="attr">app:</span> <span class="string">rook-ceph-mgr</span></span><br><span class="line">            <span class="attr">ceph_daemon_id:</span> <span class="string">a</span></span><br><span class="line">            <span class="attr">rook_cluster:</span> <span class="string">rook-ceph</span></span><br></pre></td></tr></table></figure>
+
+
+    ![https://blob.hixforever.com/image-20220129155034381.png](https://blob.hixforever.com/image-20220129155034381.png)
+</code></pre><ol start="3">
+<li><p>重新加载dashboard-external-http.yaml service。这次发现使用公网ip+Nodeport可以正常访问Dashboard</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f dashboard-external-http.yaml</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="4">
+<li><p>创建 ingress文件dashboard-ingress-http.yaml</p>
+ <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># This example is for Kubernetes running an ngnix-ingress</span></span><br><span class="line"><span class="comment"># and an ACME (e.g. Let's Encrypt) certificate service</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># The nginx-ingress annotations support the dashboard</span></span><br><span class="line"><span class="comment"># running using HTTPS with a self-signed certificate</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Ingress</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"><span class="attr">  name:</span> <span class="string">rook-ceph-mgr-dashboard</span></span><br><span class="line"><span class="attr">  namespace:</span> <span class="string">rook-ceph</span> <span class="comment"># namespace:cluster</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line"><span class="attr">  ingressClassName:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">  rules:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">host:</span> <span class="string">rookceph.zuoyejia.com</span></span><br><span class="line">      <span class="attr">http:</span></span><br><span class="line">        <span class="attr">paths:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/</span></span><br><span class="line">            <span class="attr">pathType:</span> <span class="string">Prefix</span></span><br><span class="line">            <span class="attr">backend:</span></span><br><span class="line">              <span class="attr">service:</span></span><br><span class="line">                <span class="attr">name:</span> <span class="string">rook-ceph-mgr-dashboard-external-http</span></span><br><span class="line">                <span class="attr">port:</span></span><br><span class="line">                  <span class="attr">number:</span> <span class="number">7000</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="5">
+<li><p>加载ingress</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f dashboard-ingress-http.yaml</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol start="6">
+<li>注意：本文第4、5部需要使用ingress-nginx和华为云的ELB。如果没有的话直接使用官方文档上的文件。再次提醒，service上必须加上可以访问正常Pod的选择器。</li>
+</ol>
+<h2 id="三、Ceph存储"><a href="#三、Ceph存储" class="headerlink" title="三、Ceph存储"></a><strong>三、Ceph存储</strong></h2><h3 id="1-1-块存储-RBD"><a href="#1-1-块存储-RBD" class="headerlink" title="1.1 块存储(RBD)"></a><strong>1.1 块存储(RBD)</strong></h3><p>RDB： RADOS Block Devices</p>
+<p>RADOS： Reliable, Autonomic Distributed Object Store</p>
+<ol>
+<li><p>配置<br>RWO:（ReadWriteOnce）<br>常用 块存储 。RWO模式；STS删除，pvc不会删除，需要自己手动维护</p>
+<p> <a href="https://www.rook.io/docs/rook/v1.8/ceph-block.html" target="_blank" rel="noopener">https://www.rook.io/docs/rook/v1.8/ceph-block.html</a></p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl create -f deploy/examples/csi/rbd/storageclass.yaml</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h3 id="1-2-共享文件存储-CephFS"><a href="#1-2-共享文件存储-CephFS" class="headerlink" title="1.2 共享文件存储(CephFS)"></a><strong>1.2 共享文件存储(CephFS)</strong></h3><ol>
+<li><p>配置<br>常用 文件存储。 RWX模式；如：10个Pod共同操作一个地方<br><a href="https://rook.io/docs/rook/v1.8/ceph-filesystem.html" target="_blank" rel="noopener">https://rook.io/docs/rook/v1.8/ceph-filesystem.html</a></p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> rook</span><br><span class="line">kubectl apply -f filesystem.yaml</span><br><span class="line">kubectl create -f deploy/examples/csi/cephfs/storageclass.yaml</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="四、卸载Rook-Ceph"><a href="#四、卸载Rook-Ceph" class="headerlink" title="四、卸载Rook Ceph"></a>四、卸载Rook Ceph</h2><p>参考：<a href="https://rook.io/docs/rook/v1.8/ceph-teardown.html" target="_blank" rel="noopener">https://rook.io/docs/rook/v1.8/ceph-teardown.html</a></p>
+<h3 id="1-清理集群"><a href="#1-清理集群" class="headerlink" title="1. 清理集群"></a>1. 清理集群</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rm -rf /var/lib/rook</span><br></pre></td></tr></table></figure>
+<h3 id="2-删除块和部署的文件"><a href="#2-删除块和部署的文件" class="headerlink" title="2.删除块和部署的文件"></a>2.删除块和部署的文件</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">kubectl delete -f crds.yaml -f common.yaml -f operator.yaml</span><br><span class="line">kubectl delete -f cluster.yaml</span><br><span class="line">kubectl delete -n rook-ceph cephblockpool replicapool</span><br><span class="line">kubectl delete storageclass rook-ceph-block</span><br></pre></td></tr></table></figure>
+<h3 id="3-删除CephCluster-CRD"><a href="#3-删除CephCluster-CRD" class="headerlink" title="3.删除CephCluster CRD"></a>3.删除<strong>CephCluster CRD</strong></h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1.编辑CephCluster并添加cleanupPolicy</span></span><br><span class="line"><span class="comment"># 2.删除CephClusterCR</span></span><br><span class="line"><span class="comment"># 3.确认已删除集群 CR</span></span><br><span class="line">kubectl -n rook-ceph patch cephcluster rook-ceph --<span class="built_in">type</span> merge -p <span class="string">'&#123;"spec":&#123;"cleanupPolicy":&#123;"confirmation":"yes-really-destroy-data"&#125;&#125;&#125;'</span></span><br><span class="line">kubectl -n rook-ceph delete cephcluster rook-ceph</span><br><span class="line">kubectl -n rook-ceph get cephcluster</span><br></pre></td></tr></table></figure>
+<h3 id="4-删除Operator-及相关资源"><a href="#4-删除Operator-及相关资源" class="headerlink" title="4.删除Operator 及相关资源"></a>4.删除<strong>Operator 及相关资源</strong></h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">kubectl delete -f operator.yaml</span><br><span class="line">kubectl delete -f common.yaml</span><br><span class="line">kubectl delete -f crds.yaml</span><br></pre></td></tr></table></figure>
+<h3 id="5-删除主机上的数据"><a href="#5-删除主机上的数据" class="headerlink" title="5.删除主机上的数据"></a>5.删除<strong>主机上的数据</strong></h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">DISK=<span class="string">"/dev/vdb"</span></span><br><span class="line">sgdisk --zap-all <span class="variable">$DISK</span></span><br><span class="line">dd <span class="keyword">if</span>=/dev/zero of=<span class="string">"<span class="variable">$DISK</span>"</span> bs=1M count=100 oflag=direct,dsync</span><br><span class="line"><span class="comment"># 如果是SSD</span></span><br><span class="line"><span class="comment"># blkdiscard $DISK</span></span><br><span class="line">partprobe <span class="variable">$DISK</span></span><br><span class="line"></span><br><span class="line">ls /dev/mapper/ceph-* | xargs -I% -- dmsetup remove %</span><br><span class="line">rm -rf /dev/ceph-*</span><br><span class="line">rm -rf /dev/mapper/ceph--*</span><br></pre></td></tr></table></figure>
+<h3 id="6-故障排除"><a href="#6-故障排除" class="headerlink" title="6.故障排除"></a>6.故障排除</h3><ul>
+<li><p>查看Pod</p>
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl -n rook-ceph get pod</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<ul>
+<li><p>查看集群CRD</p>
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl -n rook-ceph get cephcluster</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<ul>
+<li><p>删除CRD</p>
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 删除CRD</span></span><br><span class="line"><span class="keyword">for</span> CRD <span class="keyword">in</span> $(kubectl get crd -n rook-ceph | awk <span class="string">'/ceph.rook.io/ &#123;print $1&#125;'</span>); <span class="keyword">do</span></span><br><span class="line">    kubectl get -n rook-ceph <span class="string">"<span class="variable">$CRD</span>"</span> -o name | \</span><br><span class="line">    xargs -I &#123;&#125; kubectl patch -n rook-ceph &#123;&#125; --<span class="built_in">type</span> merge -p <span class="string">'&#123;"metadata":&#123;"finalizers": [null]&#125;&#125;'</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<ul>
+<li><p>如果如果namespace仍然停留在Terminting状态，可以检查哪些资源正在阻止删除并删除finalizers并删除</p>
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">kubectl api-resources --verbs=list --namespaced -o name \</span><br><span class="line">  | xargs -n 1 kubectl get --show-kind --ignore-not-found -n rook-ceph</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<ul>
+<li><p>删除finalizers资源</p>
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">kubectl -n rook-ceph patch configmap rook-ceph-mon-endpoints --<span class="built_in">type</span> merge -p <span class="string">'&#123;"metadata":&#123;"finalizers": []&#125;&#125;'</span></span><br><span class="line">kubectl -n rook-ceph patch secrets rook-ceph-mon --<span class="built_in">type</span> merge -p <span class="string">'&#123;"metadata":&#123;"finalizers": []&#125;&#125;'</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 如果cluster和replicapool存在执行下面命令</span></span><br><span class="line">kubectl -n rook-ceph patch cephclusters.ceph.rook.io rook-ceph -p <span class="string">'&#123;"metadata":&#123;"finalizers": []&#125;&#125;'</span> --<span class="built_in">type</span>=merge</span><br><span class="line">kubectl -n rook-ceph patch cephblockpool.ceph.rook.io replicapool -p <span class="string">'&#123;"metadata":&#123;"finalizers": []&#125;&#125;'</span> --<span class="built_in">type</span>=merge</span><br></pre></td></tr></table></figure></li>
+</ul>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/12/01/nginx-keepalived/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -3200,192 +3507,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/11/28/data-structure-algorithm-01/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Henry Ch">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="https://avatars1.githubusercontent.com/u/6983464?v=4&u=a5c0462250ccca7b22994fee0da78ec155f242a0&s=400">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="宁静的世界">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/11/28/data-structure-algorithm-01/" itemprop="url">算法复杂度分析</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-11-28T18:57:15+08:00">
-                2019-11-28
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/算法、数据结构/" itemprop="url" rel="index">
-                    <span itemprop="name">算法、数据结构</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h3 id="事后统计法"><a href="#事后统计法" class="headerlink" title="事后统计法"></a>事后统计法</h3><p>事后统计法是指把需要的统计代码跑一遍，通过统计、监控，就能得到算法执行的时间和占用的内存大小。这种统计方法非常有局限性。</p>
-<h4 id="事后统计法局限性"><a href="#事后统计法局限性" class="headerlink" title="事后统计法局限性"></a>事后统计法局限性</h4><ol>
-<li>测试结果非常依赖测试环境</li>
-<li>测试结果受数据规模的影响很大</li>
-</ol>
-<h3 id="大O复杂度表示法"><a href="#大O复杂度表示法" class="headerlink" title="大O复杂度表示法"></a>大O复杂度表示法</h3><p><strong>所有代码的执行时间 T(n) 与每行代码的执行次数 n 成正比。</strong></p>
-<p><strong><em>T(n) = O(f(n))</em></strong></p>
-<ul>
-<li>T(n) 它表示代码执行的时间；</li>
-<li>n 表示数据规模的大小；</li>
-<li>f(n) 表示每行代码执行的次数总和。因为这是一个公式，所以用 f(n) 来表示。</li>
-<li>公式中的 O，表示代码的执行时间 T(n) 与 f(n) 表达式成正比。</li>
-</ul>
-<h3 id="时间复杂度分析"><a href="#时间复杂度分析" class="headerlink" title="时间复杂度分析"></a>时间复杂度分析</h3><p>在分析时间复杂度的时候比较实用的方法有下面几个：</p>
-<ol>
-<li><p>只关注循环执行次数最多的一段代码</p>
-</li>
-<li><p>加法法则：总复杂度等于量级最大的那段代码的复杂度</p>
-</li>
-<li><p>乘法法则：嵌套代码的复杂度等于嵌套内外代码复杂度的乘积</p>
-</li>
-</ol>
-<h3 id="几种常见的时间复杂度"><a href="#几种常见的时间复杂度" class="headerlink" title="几种常见的时间复杂度"></a>几种常见的时间复杂度</h3><p>常见的时间复杂度从低阶到高阶分别为：</p>
-<ol>
-<li>常量阶：O(1)</li>
-<li>对数阶：O(logn)</li>
-<li>线性阶：O(n)</li>
-<li>线性对数阶：O(nlogn)</li>
-<li>平方阶：O($n^2$)</li>
-<li>指数阶：O($2^n$)</li>
-<li>阶乘阶：O(n!)</li>
-</ol>
-<h3 id="最好、最坏情况时间复杂度"><a href="#最好、最坏情况时间复杂度" class="headerlink" title="最好、最坏情况时间复杂度"></a>最好、最坏情况时间复杂度</h3><p>下面看如下代码：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">// n表示数组array的长度</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">find</span><span class="params">(<span class="keyword">int</span>[] array, <span class="keyword">int</span> n, <span class="keyword">int</span> x)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> i = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">int</span> pos = -<span class="number">1</span>;</span><br><span class="line">  <span class="keyword">for</span> (; i &lt; n; ++i) &#123;</span><br><span class="line">    <span class="keyword">if</span> (array[i] == x) &#123;</span><br><span class="line">       pos = i;</span><br><span class="line">       <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> pos;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li>最好情况时间复杂度就是，在最理想的情况下，执行这段代码的时间复杂度，即上面循环只遍历一次就得到结果。</li>
-<li>最坏情况时间复杂度就是，在最糟糕的情况下，执行这段代码的时间复杂度，即上面循环把整个数组都遍历一遍</li>
-</ul>
-<h3 id="平均情况时间复杂度"><a href="#平均情况时间复杂度" class="headerlink" title="平均情况时间复杂度"></a>平均情况时间复杂度</h3><ul>
-<li>平均情况时间复杂度分析，可以先算出该段代码的加权平均值之后再来分析。</li>
-</ul>
-<h3 id="均摊时间复杂度"><a href="#均摊时间复杂度" class="headerlink" title="均摊时间复杂度"></a>均摊时间复杂度</h3><ul>
-<li>出现O(1)的次数远大于出现O(n)出现的次数，那么平均平摊时间复杂度就是O(1)</li>
-</ul>
-<h3 id="空间复杂度"><a href="#空间复杂度" class="headerlink" title="空间复杂度"></a>空间复杂度</h3><p>空间复杂度分析可以参考时间复杂度分析。</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -3440,7 +3561,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">14</span>
+                  <span class="site-state-item-count">15</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -3451,7 +3572,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-count">13</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -3462,7 +3583,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">21</span>
+                  <span class="site-state-item-count">24</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
