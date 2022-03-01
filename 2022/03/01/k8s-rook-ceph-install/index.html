@@ -90,7 +90,7 @@
 <meta property="og:image" content="https://blob.hixforever.com/image-20220129150501500.png">
 <meta property="og:image" content="https://blob.hixforever.com/image-20220129150923306.png">
 <meta property="og:image" content="https://blob.hixforever.com/image-20220129151854831.png">
-<meta property="og:updated_time" content="2022-03-01T10:10:15.726Z">
+<meta property="og:updated_time" content="2022-03-01T10:16:54.156Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="搭建Rook Ceph存储集群">
 <meta name="twitter:description" content="搭建rook ceph存储集群一、安装Rook集群 https://www.rook.io/docs/rook/v1.8/quickstart.html   下载代码  12git clone --single-branch --branch v1.8.3 https://github.com/rook/rook.gitcd rook/deploy/examples    修改operator.y">
@@ -425,6 +425,7 @@
 </ol>
 <pre><code>    ![](https://blob.hixforever.com/image-20220129154431024.png)
 
+
 - 使用curl访问7000端口查看哪个Pod正常返回
 
     <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl 10.244.8.83:7000</span><br><span class="line">curl 10.244.68.188:7000</span><br></pre></td></tr></table></figure>
@@ -432,12 +433,14 @@
 
     ![](https://blob.hixforever.com/image-20220129154540460.png)
 
+
 - 查看这两个pod的lables信息，并找到ceph_daemon_id信息
 
     <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl get pod -n rook-ceph --show-labels</span><br></pre></td></tr></table></figure>
 
 
     ![](https://blob.hixforever.com/image-20220129154825543.png)
+
 
 - 修改dashboard-external-http.yaml文件。在selector中加上可用Pod的ceph_daemon_id
 

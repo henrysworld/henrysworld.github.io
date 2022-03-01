@@ -424,6 +424,7 @@
 </ol>
 <pre><code>    ![](https://blob.hixforever.com/image-20220129154431024.png)
 
+
 - 使用curl访问7000端口查看哪个Pod正常返回
 
     <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl 10.244.8.83:7000</span><br><span class="line">curl 10.244.68.188:7000</span><br></pre></td></tr></table></figure>
@@ -431,12 +432,14 @@
 
     ![](https://blob.hixforever.com/image-20220129154540460.png)
 
+
 - 查看这两个pod的lables信息，并找到ceph_daemon_id信息
 
     <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl get pod -n rook-ceph --show-labels</span><br></pre></td></tr></table></figure>
 
 
     ![](https://blob.hixforever.com/image-20220129154825543.png)
+
 
 - 修改dashboard-external-http.yaml文件。在selector中加上可用Pod的ceph_daemon_id
 
